@@ -1,0 +1,16 @@
+/target
+.env
+
+contracts/lib/**
+!contracts/lib/forge-std
+contracts/.github/
+contracts/.gitignore
+contracts/cache
+contracts/out
+contracts/broadcast/**
+
+.idea
+recipe.json
+
+devnet/snapshot_id.txt
+*.log
