@@ -26,4 +26,4 @@ Essentially this is a gas tank contract that proposers must fill with funds befo
 
 ### Proposer Multicall
 
-The proposer must degate to our multicall using 7702 to enable us to sign transactions on their behalf. We batch up inbox contract calls into a single transaction.
+The proposer multicall is a contract that our service uses to batch multiple transactions into one transaction, it expects all accounts to have delegated to a 7702 account that supports the `IProposer` interface, we also provide an example implementation of this contract.
