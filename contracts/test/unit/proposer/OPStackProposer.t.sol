@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 
-import {IProposer, Proposer} from 'contracts/proposer/Proposer.sol';
+import {IProposer, OPStackProposer} from 'contracts/proposer/OPStackProposer.sol';
 import {Helpers} from 'test/utils/Helpers.sol';
 
 contract Base is Helpers {
@@ -10,18 +10,18 @@ contract Base is Helpers {
   uint256 constant PROPOSER_PK = 0x7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6;
   address proposer = 0x90F79bf6EB2c4f870365E785982E1f101E93b906;
 
-  Proposer public proposerImplementation;
+  OPStackProposer public proposerImplementation;
   address proposerMulticall = makeAddr('proposerMulticall');
   address nonProposer = makeAddr('nonProposer');
 
   function setUp() public virtual {
-    proposerImplementation = new Proposer(proposerMulticall);
+    proposerImplementation = new OPStackProposer(proposerMulticall);
 
     vm.signAndAttachDelegation(address(proposerImplementation), PROPOSER_PK);
   }
 }
 
-contract Unit_Proposer_receive is Base {
+contract Unit_OPStackProposer_receive is Base {
   /// @dev Tests that receive succeeds
   function testFuzz_receive_succeeds(address _sender, uint256 _amount) public {
     vm.assume(_sender != address(proposer));
@@ -35,7 +35,7 @@ contract Unit_Proposer_receive is Base {
   }
 }
 
-contract Unit_Proposer_call is Base {
+contract Unit_OPStackProposer_call is Base {
   /// @dev Tests that call reverts if unauthorized
   function test_call_Unauthorized_reverts() public {
     vm.expectRevert(abi.encodeWithSelector(IProposer.Unauthorized.selector));
@@ -52,35 +52,54 @@ contract Unit_Proposer_call is Base {
     vm.expectRevert(abi.encodeWithSelector(IProposer.LowLevelCallFailed.selector));
 
     vm.prank(address(proposerMulticall));
-    IProposer(proposer).call{value: 100}(nonProposer, '');
+    IProposer(proposer).call{value: 100}(nonProposer, abi.encode(new bytes32[](0), ''));
   }
 
   /// @dev Tests that call succeeds
   function test_call_succeeds() public {
+    bytes32[] memory _versionedHashes = new bytes32[](1);
+    _versionedHashes[0] = keccak256('test');
+
     vm.deal(address(proposerMulticall), 100);
 
     vm.prank(address(proposerMulticall));
-    bool _value = IProposer(proposer).call{value: 100}(nonProposer, '');
+    bool _value = IProposer(proposer).call{value: 100}(nonProposer, abi.encode(_versionedHashes, ''));
 
     assertEq(nonProposer.balance, 100);
     assertTrue(_value);
   }
 
   /// @dev Tests that call succeeds with fuzzing
-  function testFuzz_call_succeeds(uint256 _value, bytes memory _data) public {
+  function testFuzz_call_succeeds(uint256 _value, bytes memory _calldata, bytes32[] memory _versionedHashes) public {
     vm.assume(_value < 1e40);
-    vm.assume(_data.length < 100);
+    vm.assume(_calldata.length < 100);
+    vm.assume(_versionedHashes.length < 100);
 
     vm.deal(address(proposerMulticall), _value);
 
     vm.prank(address(proposerMulticall));
-    IProposer(proposer).call{value: _value}(nonProposer, _data);
+    bool _result = IProposer(proposer).call{value: _value}(nonProposer, abi.encode(_versionedHashes, _calldata));
 
     assertEq(nonProposer.balance, _value);
+    assertTrue(_result);
+  }
+
+  /// @dev Tests that event is emitted
+  function testFuzz_call_emitsEvent(bytes32[] memory _versionedHashes, uint256 _value) public {
+    vm.assume(_versionedHashes.length < 100);
+    vm.assume(_value < 1e40);
+
+    vm.deal(address(proposerMulticall), _value);
+
+    vm.expectEmit(true, true, true, true);
+    emit OPStackProposer.BlobSubmitted(nonProposer, _versionedHashes);
+
+    vm.prank(address(proposerMulticall));
+    IProposer(proposer).call{value: _value}(nonProposer, abi.encode(_versionedHashes, ''));
   }
 }
 
-contract Unit_Proposer_ERCReceiver is Base {
+contract Unit_OPStackProposer_ERCReceiver is Base {
   /// @dev Tests that onERC721Received returns the correct selector
   function test_onERC721Received_returnsCorrectSelector() public view {
     bytes4 selector = proposerImplementation.onERC721Received(address(0), address(0), 0, '');

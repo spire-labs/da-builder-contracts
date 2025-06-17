@@ -1,7 +1,7 @@
-// SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.25;
+// SPDX-License-Identifier: MIT
+pragma solidity 0.8.30;
 
-interface IBlobAccountManager {
+interface IGasTank {
   /// @notice Throws when an account can't be closed
   error AccountCantBeClosed();
 

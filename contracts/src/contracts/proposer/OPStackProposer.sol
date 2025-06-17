@@ -3,12 +3,21 @@ pragma solidity 0.8.30;
 
 import {IProposer} from 'interfaces/proposer/IProposer.sol';
 
-/// @title Proposer
+/// @title OPStackProposer
 ///
 /// @dev An example implementation of a proposer contract that is compatible with the aggregation service
 ///      Intended to be set as an EOA account code (EIP-7702)
 ///      This contract is meant to be an example implementation, and is stateless for the sake of simple storage management
-contract Proposer is IProposer {
+///
+/// @dev This version is an example of how an OPStackProposer would be implemented
+///      Requires custom encoding of calldata before submitting to DA Builder
+contract OPStackProposer is IProposer {
+  /// @notice Event emitted when a blob is submitted
+  ///
+  /// @param _target The address of the target contract
+  /// @param _versionedHashes The versioned hashes of the blob
+  event BlobSubmitted(address _target, bytes32[] _versionedHashes);
+
   /// @notice The address of the proposer multicall contract
   address public immutable PROPOSER_MULTICALL;
 
@@ -68,6 +77,7 @@ contract Proposer is IProposer {
     bool _supported = _interfaceID == 0x01ffc9a7 // ERC-165 support (i.e. `bytes4(keccak256('supportsInterface(bytes4)'))`).
       || _interfaceID == 0x150b7a02 // ERC721TokenReceiver
       || _interfaceID == 0x4e2312e0; // ERC-1155 `ERC1155TokenReceiver` support (i.e. `bytes4(keccak256("onERC1155Received(address,address,uint256,uint256,bytes)")) ^ bytes4(keccak256("onERC1155BatchReceived(address,address,uint256[],uint256[],bytes)"))`).
+
     return _supported;
   }
 
@@ -85,11 +95,14 @@ contract Proposer is IProposer {
   function call(address _target, bytes calldata _data) external payable returns (bool) {
     if (msg.sender != PROPOSER_MULTICALL && address(this) != msg.sender) revert Unauthorized();
 
-    (bool _success,) = _target.call{value: msg.value}(_data);
+    (bytes32[] memory _versionedHashes, bytes memory _calldata) = abi.decode(_data, (bytes32[], bytes));
+
+    (bool _success,) = _target.call{value: msg.value}(_calldata);
     if (!_success) {
       revert LowLevelCallFailed();
     }
 
+    emit BlobSubmitted(_target, _versionedHashes);
     return true;
   }
 }

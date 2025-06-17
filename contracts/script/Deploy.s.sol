@@ -1,7 +1,7 @@
-// SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.25;
+// SPDX-License-Identifier: MIT
+pragma solidity 0.8.30;
 
-import {BlobAccountManager} from 'contracts/BlobAccountManager.sol';
+import {GasTank} from 'contracts/GasTank.sol';
 import {ProposerMulticall} from 'contracts/ProposerMulticall.sol';
 import {Proposer} from 'contracts/proposer/Proposer.sol';
 
@@ -17,17 +17,14 @@ contract Deploy is Script {
 
     vm.createSelectFork(vm.envString('RPC_URL'));
     vm.startBroadcast(vm.envUint('DEPLOYER_PK'));
-    BlobAccountManager accountManager = BlobAccountManager(
+    GasTank gasTank = GasTank(
       payable(
         address(
-          new ERC1967Proxy(
-            address(new BlobAccountManager()),
-            abi.encodeCall(BlobAccountManager.initialize, (_proxyAdmin, _daBuilderSigner))
-          )
+          new ERC1967Proxy(address(new GasTank()), abi.encodeCall(GasTank.initialize, (_proxyAdmin, _daBuilderSigner)))
         )
       )
     );
-    console.log('BlobAccountManager deployed to: ', address(accountManager));
+    console.log('GasTank deployed to: ', address(gasTank));
     ProposerMulticall proposerMulticall = ProposerMulticall(
       address(
         new ERC1967Proxy(
@@ -42,11 +39,11 @@ contract Deploy is Script {
     // Sanity assertions
     assert(address(proposerMulticall).code.length > 0);
     assert(address(proposer).code.length > 0);
-    assert(address(accountManager).code.length > 0);
+    assert(address(gasTank).code.length > 0);
 
     assert(proposerMulticall.BUILDER() == _daBuilderSigner);
     assert(proposer.PROPOSER_MULTICALL() == address(proposerMulticall));
-    assert(accountManager.builder() == _daBuilderSigner);
+    assert(gasTank.builder() == _daBuilderSigner);
     vm.stopBroadcast();
   }
 }

@@ -1,8 +1,8 @@
-// SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.25;
+// SPDX-License-Identifier: MIT
+pragma solidity 0.8.30;
 
 import {ERC1967Proxy} from '@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol';
-import {BlobAccountManager, IBlobAccountManager} from 'contracts/BlobAccountManager.sol';
+import {GasTank, IGasTank} from 'contracts/GasTank.sol';
 import {IProposerMulticall, ProposerMulticall} from 'contracts/ProposerMulticall.sol';
 import {Helpers} from 'test/utils/Helpers.sol';
 
@@ -12,11 +12,11 @@ abstract contract Base is Helpers {
 
   // Proxies
   ProposerMulticall public proposerMulticall;
-  BlobAccountManager public blobAccountManager;
+  GasTank public gasTank;
 
   // Implementations
   ProposerMulticall public proposerMulticallImpl;
-  BlobAccountManager public blobAccountManagerImpl;
+  GasTank public gasTankImpl;
 
   // Addresses
   address public daBuilder = makeAddr('daBuilder');
@@ -27,15 +27,11 @@ abstract contract Base is Helpers {
 
     vm.startPrank(proxyAdmin);
     proposerMulticallImpl = new ProposerMulticall(daBuilder);
-    blobAccountManagerImpl = new BlobAccountManager();
+    gasTankImpl = new GasTank();
 
-    blobAccountManager = BlobAccountManager(
+    gasTank = GasTank(
       payable(
-        address(
-          new ERC1967Proxy(
-            address(blobAccountManagerImpl), abi.encodeCall(IBlobAccountManager.initialize, (proxyAdmin, daBuilder))
-          )
-        )
+        address(new ERC1967Proxy(address(gasTankImpl), abi.encodeCall(IGasTank.initialize, (proxyAdmin, daBuilder))))
       )
     );
     proposerMulticall = ProposerMulticall(
@@ -62,11 +58,11 @@ contract Integration_Setup is Base {
     // Initializers
     assertEq(proposerMulticall.BUILDER(), daBuilder);
     assertEq(proposerMulticall.owner(), proxyAdmin);
-    assertEq(blobAccountManager.builder(), daBuilder);
-    assertEq(blobAccountManager.owner(), proxyAdmin);
+    assertEq(gasTank.builder(), daBuilder);
+    assertEq(gasTank.owner(), proxyAdmin);
 
     // Proxy check
     assertEq(keccak256(address(proposerMulticall).code), keccak256(type(ERC1967Proxy).runtimeCode));
-    assertEq(keccak256(address(blobAccountManager).code), keccak256(type(ERC1967Proxy).runtimeCode));
+    assertEq(keccak256(address(gasTank).code), keccak256(type(ERC1967Proxy).runtimeCode));
   }
 }

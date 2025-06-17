@@ -1,14 +1,14 @@
-// SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.25;
+// SPDX-License-Identifier: MIT
+pragma solidity 0.8.30;
 
 import {OwnableUpgradeable} from '@openzeppelin-upgradeable/contracts/access/OwnableUpgradeable.sol';
 import {UUPSUpgradeable} from '@openzeppelin-upgradeable/contracts/proxy/utils/UUPSUpgradeable.sol';
-import {IBlobAccountManager} from 'interfaces/IBlobAccountManager.sol';
+import {IGasTank} from 'interfaces/IGasTank.sol';
 
-/// @title BlobAccountManager
+/// @title GasTank
 ///
 /// @notice Contract for rollups to deposit funds for the aggregator service to charge from
-contract BlobAccountManager is IBlobAccountManager, UUPSUpgradeable, OwnableUpgradeable {
+contract GasTank is IGasTank, UUPSUpgradeable, OwnableUpgradeable {
   /// @notice The delay before an account can be closed
   uint256 public constant WITHDRAWAL_DELAY = 7 days;
 
