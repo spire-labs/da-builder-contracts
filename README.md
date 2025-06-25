@@ -16,7 +16,7 @@ forge install
 
 ## Overview
 
-DA Builder is a data availability blob aggregation service that takes type 3 blob transactions from L2 rollups and aggreagtes them with other roll up transactions and posts them on behalf of rollup proposers. To do this we need to take payment for gas and be able to sign transactions using a hot wallet on behalf of the proposer. To keep gas costs down we record payments off chain and charge the proposer on a scheduled basis.
+DA Builder is an execution aggregation service that takes type 2 transactions and type 3 blob transactions and sequences them into one big transaction to save execution costs on mainnet. To do this we need to take payment for gas and be able to sign transactions using a hot wallet on behalf of the proposer. To keep gas costs down we record payments off chain and charge the proposer on a scheduled basis.
 
 ### GasTank
 
