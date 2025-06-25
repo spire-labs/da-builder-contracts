@@ -90,17 +90,17 @@ contract OPStackProposer is IProposer {
   ///
   /// @dev The interface expectation is the boolean return value matches the status of the call, if it returns false for any reason
   ///      the builder will ignore the transaction
+  ///
   /// @dev Has a whitelist check to enforce an authorized caller
+  ///
   /// @dev Used to allow for contracts to make arbitrary calls for an EOA
-  function call(address _target, bytes calldata _data) external payable returns (bool) {
+  ///
+  /// @dev Due to op-stack chain operators unique usecase this implementation is unconventional and does not make a low level call
+  ///      But is still fully compatible with the aggregator service
+  function call(address _target, bytes calldata _data, uint256) external returns (bool) {
     if (msg.sender != PROPOSER_MULTICALL && address(this) != msg.sender) revert Unauthorized();
 
-    (bytes32[] memory _versionedHashes, bytes memory _calldata) = abi.decode(_data, (bytes32[], bytes));
-
-    (bool _success,) = _target.call{value: msg.value}(_calldata);
-    if (!_success) {
-      revert LowLevelCallFailed();
-    }
+    (bytes32[] memory _versionedHashes) = abi.decode(_data, (bytes32[]));
 
     emit BlobSubmitted(_target, _versionedHashes);
     return true;

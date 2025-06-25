@@ -2,21 +2,24 @@
 pragma solidity 0.8.30;
 
 interface IProposerMulticall {
+  event InternalGasUsed(uint256[] _internalCallsGasUsed);
+
   error LowLevelCallFailed();
   error Unauthorized();
   error InvalidProposer();
+  error OutOfGas();
 
   struct Call {
     address proposer;
     address target;
     bytes data;
     uint256 value;
-    bool enforceRevert;
+    uint256 gasLimit;
   }
 
   function multicall(
     Call[] calldata _calls
-  ) external payable;
+  ) external;
   function initialize(
     address _owner
   ) external;

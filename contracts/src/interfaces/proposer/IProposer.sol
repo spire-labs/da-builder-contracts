@@ -5,5 +5,5 @@ interface IProposer {
   error LowLevelCallFailed();
   error Unauthorized();
 
-  function call(address _target, bytes calldata _data) external payable returns (bool);
+  function call(address _target, bytes calldata _data, uint256 _value) external returns (bool);
 }

@@ -41,18 +41,7 @@ contract Unit_OPStackProposer_call is Base {
     vm.expectRevert(abi.encodeWithSelector(IProposer.Unauthorized.selector));
 
     vm.prank(nonProposer);
-    IProposer(proposer).call(nonProposer, '');
-  }
-
-  /// @dev Tests that call reverts if low level call fails
-  function test_call_lowLevelCallFails_reverts() public {
-    vm.deal(address(proposerMulticall), 100);
-
-    vm.mockCallRevert(nonProposer, 100, abi.encode(), abi.encode('ERROR_MESSAGE'));
-    vm.expectRevert(abi.encodeWithSelector(IProposer.LowLevelCallFailed.selector));
-
-    vm.prank(address(proposerMulticall));
-    IProposer(proposer).call{value: 100}(nonProposer, abi.encode(new bytes32[](0), ''));
+    IProposer(proposer).call(nonProposer, '', 0);
   }
 
   /// @dev Tests that call succeeds
@@ -60,42 +49,35 @@ contract Unit_OPStackProposer_call is Base {
     bytes32[] memory _versionedHashes = new bytes32[](1);
     _versionedHashes[0] = keccak256('test');
 
-    vm.deal(address(proposerMulticall), 100);
-
     vm.prank(address(proposerMulticall));
-    bool _value = IProposer(proposer).call{value: 100}(nonProposer, abi.encode(_versionedHashes, ''));
+    bool _returnedValue = IProposer(proposer).call(nonProposer, abi.encode(_versionedHashes), 100);
 
-    assertEq(nonProposer.balance, 100);
-    assertTrue(_value);
+    assertTrue(_returnedValue);
   }
 
   /// @dev Tests that call succeeds with fuzzing
-  function testFuzz_call_succeeds(uint256 _value, bytes memory _calldata, bytes32[] memory _versionedHashes) public {
-    vm.assume(_value < 1e40);
-    vm.assume(_calldata.length < 100);
+  function testFuzz_call_succeeds(
+    bytes32[] memory _versionedHashes
+  ) public {
     vm.assume(_versionedHashes.length < 100);
 
-    vm.deal(address(proposerMulticall), _value);
-
     vm.prank(address(proposerMulticall));
-    bool _result = IProposer(proposer).call{value: _value}(nonProposer, abi.encode(_versionedHashes, _calldata));
 
-    assertEq(nonProposer.balance, _value);
+    bool _result = IProposer(proposer).call(nonProposer, abi.encode(_versionedHashes), 0);
+
     assertTrue(_result);
   }
 
   /// @dev Tests that event is emitted
   function testFuzz_call_emitsEvent(bytes32[] memory _versionedHashes, uint256 _value) public {
     vm.assume(_versionedHashes.length < 100);
-    vm.assume(_value < 1e40);
-
-    vm.deal(address(proposerMulticall), _value);
 
     vm.expectEmit(true, true, true, true);
     emit OPStackProposer.BlobSubmitted(nonProposer, _versionedHashes);
 
+    // Value is fuzzed, but the implementation does not use it, so there are no assertions
     vm.prank(address(proposerMulticall));
-    IProposer(proposer).call{value: _value}(nonProposer, abi.encode(_versionedHashes, ''));
+    IProposer(proposer).call(nonProposer, abi.encode(_versionedHashes), _value);
   }
 }
 

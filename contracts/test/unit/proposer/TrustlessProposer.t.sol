@@ -19,17 +19,18 @@ contract forTest_TrustlessProposer is TrustlessProposer {
     uint256 _deadline,
     uint256 _nonce,
     address _target,
+    uint256 _value,
     bytes memory _calldata
   ) external view returns (bytes32) {
-    return _hashTypedDataV4(keccak256(abi.encode(CALL_TYPEHASH, _deadline, _nonce, _target, _calldata)));
+    return _hashTypedDataV4(keccak256(abi.encode(CALL_TYPEHASH, _deadline, _nonce, _target, _value, _calldata)));
   }
 }
 
 contract Base is Helpers {
   // This PK is from the publicly known anvil private keys
   // hardcoding it is safe
-  uint256 constant PROPOSER_PK = 0x7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6;
-  address payable proposer = payable(0x90F79bf6EB2c4f870365E785982E1f101E93b906);
+  uint256 constant PROPOSER_PK = 0x2a871d0798f97d79848a013d4936a73bf4cc922c825d33c1cf7073dff6d409c6;
+  address payable proposer = payable(0xa0Ee7A142d267C1f36714E4a8F75612F20a79720);
 
   forTest_TrustlessProposer public proposerImplementation;
   address proposerMulticall = makeAddr('proposerMulticall');
@@ -62,7 +63,7 @@ contract Unit_TrustlessProposer_call is Base {
     vm.expectRevert(abi.encodeWithSelector(IProposer.Unauthorized.selector));
 
     vm.prank(nonProposer);
-    IProposer(proposer).call(nonProposer, '');
+    IProposer(proposer).call(nonProposer, '', 0);
   }
 
   /// @dev Tests that call reverts if deadline has passed
@@ -78,7 +79,7 @@ contract Unit_TrustlessProposer_call is Base {
     vm.expectRevert(abi.encodeWithSelector(TrustlessProposer.DeadlinePassed.selector));
 
     vm.prank(proposerMulticall);
-    IProposer(proposer).call(nonProposer, abi.encode(bytes(''), _currentTime, 0, ''));
+    IProposer(proposer).call(nonProposer, abi.encode(bytes(''), _currentTime, 0, ''), 0);
   }
 
   /// @dev Tests that call reverts if nonce is too low
@@ -90,36 +91,36 @@ contract Unit_TrustlessProposer_call is Base {
 
     vm.expectRevert(abi.encodeWithSelector(TrustlessProposer.NonceTooLow.selector));
     vm.prank(proposerMulticall);
-    IProposer(proposer).call(nonProposer, abi.encode(bytes(''), block.timestamp, _nonce - 1, ''));
+    IProposer(proposer).call(nonProposer, abi.encode(bytes(''), block.timestamp, _nonce - 1, ''), 0);
   }
 
   /// @dev Tests that call reverts if signature is invalid
-  function testFuzz_call_SignatureInvalid_reverts() public {
+  function test_call_SignatureInvalid_reverts() public {
     vm.expectRevert(abi.encodeWithSelector(TrustlessProposer.SignatureInvalid.selector));
     vm.prank(proposerMulticall);
-    IProposer(proposer).call(nonProposer, abi.encode(bytes(''), block.timestamp, 0, ''));
+    IProposer(proposer).call(nonProposer, abi.encode(bytes(''), block.timestamp, 0, ''), 0);
   }
 
   /// @dev Tests that call reverts if low level call fails
-  function testFuzz_call_LowLevelCallFailed_reverts() public {
+  function test_call_LowLevelCallFailed_reverts() public {
     vm.mockCallRevert(nonProposer, abi.encode(), abi.encode('ERROR_MESSAGE'));
 
-    bytes32 digest = forTest_TrustlessProposer(proposer).forTest_hashTypedDataV4(block.timestamp, 0, nonProposer, '');
+    bytes32 digest = forTest_TrustlessProposer(proposer).forTest_hashTypedDataV4(block.timestamp, 0, nonProposer, 0, '');
     (uint8 v, bytes32 r, bytes32 s) = vm.sign(PROPOSER_PK, digest);
 
     vm.expectRevert(abi.encodeWithSelector(IProposer.LowLevelCallFailed.selector));
     vm.prank(proposerMulticall);
-    IProposer(proposer).call(nonProposer, abi.encode(abi.encodePacked(r, s, v), block.timestamp, 0, bytes('')));
+    IProposer(proposer).call(nonProposer, abi.encode(abi.encodePacked(r, s, v), block.timestamp, 0, bytes('')), 0);
   }
 
   /// @dev Tests that call succeeds
-  function testFuzz_call_succeeds() public {
-    bytes32 digest = forTest_TrustlessProposer(proposer).forTest_hashTypedDataV4(block.timestamp, 0, nonProposer, '');
+  function test_call_succeeds() public {
+    bytes32 digest = forTest_TrustlessProposer(proposer).forTest_hashTypedDataV4(999_999_999_999, 0, address(0), 0, '');
     (uint8 v, bytes32 r, bytes32 s) = vm.sign(PROPOSER_PK, digest);
 
     vm.prank(proposerMulticall);
     bool result =
-      IProposer(proposer).call(nonProposer, abi.encode(abi.encodePacked(r, s, v), block.timestamp, 0, bytes('')));
+      IProposer(proposer).call(address(0), abi.encode(abi.encodePacked(r, s, v), 999_999_999_999, 0, bytes('')), 0);
 
     assertTrue(result);
   }

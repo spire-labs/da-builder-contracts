@@ -27,7 +27,7 @@ abstract contract TrustlessProposer is IProposer, EIP712 {
 
   /// @notice The typehash for the call struct
   bytes32 public constant CALL_TYPEHASH =
-    keccak256('Call(uint256 deadline,uint256 nonce,address target,bytes calldata)');
+    keccak256('Call(uint256 deadline,uint256 nonce,address target,uint256 value,bytes calldata)');
 
   /// @notice The address of the proposer multicall contract
   address public immutable PROPOSER_MULTICALL;
@@ -100,6 +100,7 @@ abstract contract TrustlessProposer is IProposer, EIP712 {
   ///
   /// @param _target The address to call
   /// @param _data The calldata to send
+  /// @param _value The value to send with the call
   ///
   /// @return True by default if the call succeeds
   ///
@@ -107,7 +108,7 @@ abstract contract TrustlessProposer is IProposer, EIP712 {
   ///      the builder will ignore the transaction
   /// @dev Has a whitelist check to enforce an authorized caller
   /// @dev Used to allow for contracts to make arbitrary calls for an EOA
-  function call(address _target, bytes calldata _data) external payable returns (bool) {
+  function call(address _target, bytes calldata _data, uint256 _value) external returns (bool) {
     if (msg.sender != PROPOSER_MULTICALL && address(this) != msg.sender) revert Unauthorized();
 
     (bytes memory _sig, uint256 _deadline, uint256 _nonce, bytes memory _calldata) =
@@ -124,7 +125,8 @@ abstract contract TrustlessProposer is IProposer, EIP712 {
     if (_currentNonce != _nonce) revert NonceTooLow();
 
     // Recover the signer from the signature
-    bytes32 _messageHash = _hashTypedDataV4(keccak256(abi.encode(CALL_TYPEHASH, _deadline, _nonce, _target, _calldata)));
+    bytes32 _messageHash =
+      _hashTypedDataV4(keccak256(abi.encode(CALL_TYPEHASH, _deadline, _nonce, _target, _value, _calldata)));
 
     // Signature values
     uint8 v;
@@ -144,7 +146,7 @@ abstract contract TrustlessProposer is IProposer, EIP712 {
     // EIP-7702 account needs to be the signer
     if (_signer != address(this)) revert SignatureInvalid();
 
-    (bool _success,) = _target.call{value: msg.value}(_calldata);
+    (bool _success,) = _target.call{value: _value}(_calldata);
     if (!_success) {
       revert LowLevelCallFailed();
     }

@@ -63,9 +63,9 @@ contract Unit_ProposerMulticall_multicall is Base {
   function test_multicall_reverts_if_no_data() external {
     IProposerMulticall.Call[] memory calls = new IProposerMulticall.Call[](1);
 
-    calls[0] = IProposerMulticall.Call(proposer, nonProposer, '', 0, true);
+    calls[0] = IProposerMulticall.Call(proposer, nonProposer, '', 0, 21_000);
 
-    _mockAndExpect(proposer, abi.encodeCall(IProposer.call, (nonProposer, '')), abi.encode());
+    _mockAndExpect(proposer, abi.encodeCall(IProposer.call, (nonProposer, '', 0)), abi.encode());
 
     vm.expectRevert(abi.encodeWithSelector(IProposerMulticall.InvalidProposer.selector));
     vm.prank(address(builder));
@@ -76,22 +76,23 @@ contract Unit_ProposerMulticall_multicall is Base {
   function test_multicall_reverts_if_false() external {
     IProposerMulticall.Call[] memory calls = new IProposerMulticall.Call[](1);
 
-    calls[0] = IProposerMulticall.Call(proposer, nonProposer, '', 0, true);
+    calls[0] = IProposerMulticall.Call(proposer, nonProposer, '', 0, 21_000);
 
-    _mockAndExpect(proposer, abi.encodeCall(IProposer.call, (nonProposer, '')), abi.encode(false));
+    _mockAndExpect(proposer, abi.encodeCall(IProposer.call, (nonProposer, '', 0)), abi.encode(false));
 
     vm.expectRevert(abi.encodeWithSelector(IProposerMulticall.LowLevelCallFailed.selector));
     vm.prank(address(builder));
     IProposerMulticall(multicall).multicall(calls);
   }
 
-  /// @dev Tests that multicall doesn't revert if proposer returns false and enforce revert is false
-  function test_multicall_unenforcedRevert_with_false_return_succeeds() external {
+  /// @dev Tests that multicall reverts if it ran out of gas
+  function test_multicall_outOfGas_reverts() external {
     IProposerMulticall.Call[] memory calls = new IProposerMulticall.Call[](1);
-    calls[0] = IProposerMulticall.Call(proposer, nonProposer, '', 0, false);
+    calls[0] = IProposerMulticall.Call(proposer, nonProposer, '', 0, 0);
 
-    _mockAndExpect(proposer, abi.encodeCall(IProposer.call, (nonProposer, '')), abi.encode(false));
+    _mockAndExpect(proposer, abi.encodeCall(IProposer.call, (nonProposer, '', 0)), abi.encode(true));
 
+    vm.expectRevert(abi.encodeWithSelector(IProposerMulticall.OutOfGas.selector));
     vm.prank(address(builder));
     IProposerMulticall(multicall).multicall(calls);
   }
@@ -100,9 +101,9 @@ contract Unit_ProposerMulticall_multicall is Base {
   function test_multicall_noValue_succeeds() external {
     IProposerMulticall.Call[] memory calls = new IProposerMulticall.Call[](1);
 
-    calls[0] = IProposerMulticall.Call(proposer, nonProposer, '', 0, true);
+    calls[0] = IProposerMulticall.Call(proposer, nonProposer, '', 0, 21_000);
 
-    _mockAndExpect(proposer, abi.encodeCall(IProposer.call, (nonProposer, '')), abi.encode(true));
+    _mockAndExpect(proposer, abi.encodeCall(IProposer.call, (nonProposer, '', 0)), abi.encode(true));
 
     vm.prank(address(builder));
     IProposerMulticall(multicall).multicall(calls);
@@ -110,82 +111,87 @@ contract Unit_ProposerMulticall_multicall is Base {
 
   /// @dev Tests that multicall succeeds with a value call
   function test_multicall_value_succeeds() external {
-    vm.deal(address(builder), 100);
+    vm.deal(address(proposer), 100);
 
     IProposerMulticall.Call[] memory calls = new IProposerMulticall.Call[](1);
 
-    calls[0] = IProposerMulticall.Call(proposer, nonProposer, '', 100, true);
+    calls[0] = IProposerMulticall.Call(proposer, nonProposer, '', 100, 21_000);
 
-    _mockAndExpect(proposer, abi.encodeCall(IProposer.call, (nonProposer, '')), abi.encode(true));
-
-    vm.prank(address(builder));
-    IProposerMulticall(multicall).multicall{value: 100}(calls);
-  }
-
-  /// @dev Tests that multicall doesn't revert if enforceRevert is false
-  function test_multicall_unenforcedRevert_succeeds() external {
-    vm.deal(address(builder), 100);
-
-    IProposerMulticall.Call[] memory calls = new IProposerMulticall.Call[](1);
-    calls[0] = IProposerMulticall.Call(proposer, nonProposer, '', 100, false);
-
-    vm.mockCallRevert(proposer, abi.encodeCall(IProposer.call, (nonProposer, '')), abi.encode(true));
-    vm.expectCall(proposer, abi.encodeCall(IProposer.call, (nonProposer, '')));
+    _mockAndExpect(proposer, abi.encodeCall(IProposer.call, (nonProposer, '', 100)), abi.encode(true));
 
     vm.prank(address(builder));
-    IProposerMulticall(multicall).multicall{value: 100}(calls);
+    IProposerMulticall(multicall).multicall(calls);
   }
 
   /// @dev Tests that multicall reverts if the low level call fails and revert is enforced
   function test_multicall_lowLevelCallFails_reverts() external {
-    vm.deal(address(builder), 100);
+    vm.deal(address(proposer), 100);
 
     IProposerMulticall.Call[] memory calls = new IProposerMulticall.Call[](1);
-    calls[0] = IProposerMulticall.Call(proposer, nonProposer, '', 100, true);
+    calls[0] = IProposerMulticall.Call(proposer, nonProposer, '', 100, 21_000);
 
-    vm.mockCallRevert(proposer, abi.encodeCall(IProposer.call, (nonProposer, '')), abi.encode(true));
+    vm.mockCallRevert(proposer, abi.encodeCall(IProposer.call, (nonProposer, '', 100)), abi.encode(true));
 
     vm.expectRevert(abi.encodeWithSelector(IProposerMulticall.LowLevelCallFailed.selector));
     vm.prank(address(builder));
-    IProposerMulticall(multicall).multicall{value: 100}(calls);
+    IProposerMulticall(multicall).multicall(calls);
   }
 
   /// @dev Tests that multicall succeeds with multiple calls
   function test_multicall_multipleCalls_succeeds() external {
-    vm.deal(address(builder), 200);
+    vm.deal(address(proposer), 200);
 
     IProposerMulticall.Call[] memory calls = new IProposerMulticall.Call[](2);
 
-    calls[0] = IProposerMulticall.Call(proposer, nonProposer, '', 100, true);
-    calls[1] = IProposerMulticall.Call(proposer, nonProposer2, '', 100, true);
+    calls[0] = IProposerMulticall.Call(proposer, nonProposer, '', 100, 21_000);
+    calls[1] = IProposerMulticall.Call(proposer, nonProposer2, '', 100, 21_000);
 
-    _mockAndExpect(proposer, abi.encodeCall(IProposer.call, (nonProposer, '')), abi.encode(true));
-    _mockAndExpect(proposer, abi.encodeCall(IProposer.call, (nonProposer2, '')), abi.encode(true));
+    _mockAndExpect(proposer, abi.encodeCall(IProposer.call, (nonProposer, '', 100)), abi.encode(true));
+    _mockAndExpect(proposer, abi.encodeCall(IProposer.call, (nonProposer2, '', 100)), abi.encode(true));
 
     vm.prank(address(builder));
-    IProposerMulticall(multicall).multicall{value: 200}(calls);
+    IProposerMulticall(multicall).multicall(calls);
+  }
+
+  /// @dev Tests that multicall emits the internal gas used
+  function test_multicall_emits_internalGasUsed() external {
+    uint256[] memory _internalCallsGasUsed = new uint256[](1);
+    // This is the amount expected from the mock
+    _internalCallsGasUsed[0] = 1050;
+
+    IProposerMulticall.Call[] memory calls = new IProposerMulticall.Call[](1);
+    calls[0] = IProposerMulticall.Call(proposer, nonProposer, '', 0, 1214);
+
+    vm.expectEmit(true, true, true, true);
+    emit IProposerMulticall.InternalGasUsed(_internalCallsGasUsed);
+
+    _mockAndExpect(proposer, abi.encodeCall(IProposer.call, (nonProposer, '', 0)), abi.encode(true));
+
+    vm.prank(address(builder));
+    IProposerMulticall(multicall).multicall(calls);
   }
 
   /// @dev Tests that multicall succeeds with fuzzing
-  function testFuzz_muticall_succeeds(IProposerMulticall.Call[] memory calls, uint256 summationValue) public {
+  function testFuzz_multicall_succeeds(IProposerMulticall.Call[] memory calls, uint256 summationValue) public {
     vm.assume(calls.length < 10);
     summationValue = bound(summationValue, 1e8 * 10, type(uint256).max - 1);
 
-    uint256 _summationValue;
     for (uint256 i; i < calls.length; ++i) {
+      // This is fine because we always mock the return of the call anyway
+      vm.assume(calls[i].gasLimit > 100_000);
       calls[i].value = bound(calls[i].value, 1, 1e8);
       // getting weird conflicts with foundry vm without this weird bound
       calls[i].proposer = address(uint160(bound(uint256(uint160(proposer)), type(uint64).max, type(uint160).max - 1)));
-      _summationValue += calls[i].value;
+      vm.deal(calls[i].proposer, calls[i].value);
       _mockAndExpect(
-        calls[i].proposer, abi.encodeCall(IProposer.call, (calls[i].target, calls[i].data)), abi.encode(true)
+        calls[i].proposer,
+        abi.encodeCall(IProposer.call, (calls[i].target, calls[i].data, calls[i].value)),
+        abi.encode(true)
       );
     }
 
-    vm.deal(address(builder), summationValue);
-
     vm.prank(address(builder));
-    IProposerMulticall(multicall).multicall{value: summationValue}(calls);
+    IProposerMulticall(multicall).multicall(calls);
   }
 }
 

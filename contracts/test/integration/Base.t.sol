@@ -55,6 +55,10 @@ contract Integration_Setup is Base {
 
   /// @dev Tests that the deployments were made correctly
   function test_deployments_succeeds() public view {
+    // Version
+    assertEq(proposerMulticall.version(), '1.0.0');
+    assertEq(gasTank.version(), '1.0.0');
+
     // Initializers
     assertEq(proposerMulticall.BUILDER(), daBuilder);
     assertEq(proposerMulticall.owner(), proxyAdmin);

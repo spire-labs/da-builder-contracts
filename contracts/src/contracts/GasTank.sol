@@ -4,11 +4,15 @@ pragma solidity 0.8.30;
 import {OwnableUpgradeable} from '@openzeppelin-upgradeable/contracts/access/OwnableUpgradeable.sol';
 import {UUPSUpgradeable} from '@openzeppelin-upgradeable/contracts/proxy/utils/UUPSUpgradeable.sol';
 import {IGasTank} from 'interfaces/IGasTank.sol';
+import {ISemver} from 'interfaces/utils/ISemver.sol';
 
 /// @title GasTank
 ///
 /// @notice Contract for rollups to deposit funds for the aggregator service to charge from
-contract GasTank is IGasTank, UUPSUpgradeable, OwnableUpgradeable {
+contract GasTank is IGasTank, ISemver, UUPSUpgradeable, OwnableUpgradeable {
+  /// @notice The version of the contract
+  string internal constant _VERSION = '1.0.0';
+
   /// @notice The delay before an account can be closed
   uint256 public constant WITHDRAWAL_DELAY = 7 days;
 
@@ -144,6 +148,11 @@ contract GasTank is IGasTank, UUPSUpgradeable, OwnableUpgradeable {
   function _authorizeUpgrade(
     address _newImplementation
   ) internal override onlyOwner {}
+
+  /// @notice Returns the version of the contract
+  function version() external pure returns (string memory) {
+    return _VERSION;
+  }
 
   receive() external payable {
     _deposit();

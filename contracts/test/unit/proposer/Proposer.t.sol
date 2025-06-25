@@ -41,29 +41,30 @@ contract Unit_Proposer_call is Base {
     vm.expectRevert(abi.encodeWithSelector(IProposer.Unauthorized.selector));
 
     vm.prank(nonProposer);
-    IProposer(proposer).call(nonProposer, '');
+    IProposer(proposer).call(nonProposer, '', 0);
   }
 
   /// @dev Tests that call reverts if low level call fails
   function test_call_lowLevelCallFails_reverts() public {
-    vm.deal(address(proposerMulticall), 100);
+    vm.deal(address(proposer), 100);
 
     vm.mockCallRevert(nonProposer, 100, abi.encode(), abi.encode('ERROR_MESSAGE'));
     vm.expectRevert(abi.encodeWithSelector(IProposer.LowLevelCallFailed.selector));
 
     vm.prank(address(proposerMulticall));
-    IProposer(proposer).call{value: 100}(nonProposer, '');
+    IProposer(proposer).call(nonProposer, '', 100);
   }
 
   /// @dev Tests that call succeeds
   function test_call_succeeds() public {
-    vm.deal(address(proposerMulticall), 100);
+    vm.deal(address(proposer), 100);
 
     vm.prank(address(proposerMulticall));
-    bool _value = IProposer(proposer).call{value: 100}(nonProposer, '');
+    bool _returned_value = IProposer(proposer).call(nonProposer, '', 100);
 
     assertEq(nonProposer.balance, 100);
-    assertTrue(_value);
+    assertEq(address(proposer).balance, 0);
+    assertTrue(_returned_value);
   }
 
   /// @dev Tests that call succeeds with fuzzing
@@ -71,12 +72,13 @@ contract Unit_Proposer_call is Base {
     vm.assume(_value < 1e40);
     vm.assume(_data.length < 100);
 
-    vm.deal(address(proposerMulticall), _value);
+    vm.deal(address(proposer), _value);
 
     vm.prank(address(proposerMulticall));
-    IProposer(proposer).call{value: _value}(nonProposer, _data);
+    IProposer(proposer).call(nonProposer, _data, _value);
 
     assertEq(nonProposer.balance, _value);
+    assertEq(address(proposer).balance, 0);
   }
 }
 
