@@ -29,4 +29,8 @@ The proposer multicall is a contract that our service uses to batch multiple tra
 ### IProposer
 This is the expected interface for accounts to delegate to using 7702, we provide an example implementation for a 7702 proposer account for users to use, however if someone wants to use their own implementation they can, the only requirement is it supports the `IProposer` interface.
 
-There are several different implementations of an example Proposer contract inside this repo
+There are several different implementations of an example Proposer contract inside this repo:
+
+- `Proposer`: This is a standard implementation, that fully trusts the `ProposerMulticall` contract and DA Builder to call it with the proper calldata
+- `TrustlessProposer`: This is an implementation that encodes extra data into the calldata sent to the service, to enforce at runtime that no calldata was modified and what was sent to DA Builder is the same thing being executed onchain
+- `OPStackProposer`: This is an implementation that trusts the `ProposerMulticall` and is intended for the sole purpose of posting blobs so an OP-stack chain can still derive the correct data, this is intended to be used in pair with some derivation changes in the OP-stack
