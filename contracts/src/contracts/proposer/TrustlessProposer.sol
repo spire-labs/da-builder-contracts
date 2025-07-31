@@ -131,23 +131,9 @@ abstract contract TrustlessProposer is IProposer, EIP712 {
     if (_currentNonce != _nonce) revert NonceTooLow();
 
     // Recover the signer from the signature
-    bytes32 _messageHash =
-      _hashTypedDataV4(keccak256(abi.encode(CALL_TYPEHASH, _deadline, _nonce, _target, _value, _calldata, _gasLimit)));
+    bytes32 _messageHash = _hashTypedDataV4(_deadline, _nonce, _target, _value, _calldata, _gasLimit);
 
-    // Signature values
-    uint8 v;
-    bytes32 r;
-    bytes32 s;
-
-    // ecrecover takes the signature parameters
-    /// @solidity memory-safe-assembly
-    assembly {
-      r := mload(add(_sig, 0x20))
-      s := mload(add(_sig, 0x40))
-      v := byte(0, mload(add(_sig, 0x60)))
-    }
-
-    address _signer = ecrecover(_messageHash, v, r, s);
+    address _signer = _getSignerFromSignature(_messageHash, _sig);
 
     // EIP-7702 account needs to be the signer
     if (_signer != address(this)) revert SignatureInvalid();
@@ -167,5 +153,43 @@ abstract contract TrustlessProposer is IProposer, EIP712 {
     }
 
     return true;
+  }
+
+  /// @notice Hashes the typed data for the call
+  ///
+  /// @param _deadline The deadline for the call
+  /// @param _nonce The nonce for the call
+  /// @param _target The target for the call
+  /// @param _value The value for the call
+  function _hashTypedDataV4(
+    uint256 _deadline,
+    uint256 _nonce,
+    address _target,
+    uint256 _value,
+    bytes memory _calldata,
+    uint256 _gasLimit
+  ) internal view returns (bytes32) {
+    return
+      _hashTypedDataV4(keccak256(abi.encode(CALL_TYPEHASH, _deadline, _nonce, _target, _value, _calldata, _gasLimit)));
+  }
+
+  /// @notice Gets the signer from the signature
+  ///
+  /// @param _messageHash The message hash to recover the signer from
+  /// @param _sig The signature to recover the signer from
+  ///
+  /// @return The signer address
+  function _getSignerFromSignature(bytes32 _messageHash, bytes memory _sig) internal pure returns (address) {
+    uint8 v;
+    bytes32 r;
+    bytes32 s;
+
+    assembly {
+      r := mload(add(_sig, 0x20))
+      s := mload(add(_sig, 0x40))
+      v := byte(0, mload(add(_sig, 0x60)))
+    }
+
+    return ecrecover(_messageHash, v, r, s);
   }
 }
