@@ -11,6 +11,9 @@ import {IProposer} from 'interfaces/proposer/IProposer.sol';
 ///
 /// @dev This version is an example of how an OPStackProposer would be implemented
 ///      Requires custom encoding of calldata before submitting to DA Builder
+///
+/// @dev WARNING: This contract trusts the multicall contract to be honest since it has unrestricted access to the call function.
+///      We recommend using this setup with accounts that are heavily restricted or using the TrustlessProposer instead
 contract OPStackProposer is IProposer {
   /// @notice Event emitted when a blob is submitted
   ///
