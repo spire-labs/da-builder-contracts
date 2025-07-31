@@ -25,9 +25,12 @@ abstract contract TrustlessProposer is IProposer, EIP712 {
   /// @notice Error thrown when the signature is invalid
   error SignatureInvalid();
 
+  /// @notice Error thrown when the gas limit is exceeded
+  error GasLimitExceeded();
+
   /// @notice The typehash for the call struct
   bytes32 public constant CALL_TYPEHASH =
-    keccak256('Call(uint256 deadline,uint256 nonce,address target,uint256 value,bytes calldata)');
+    keccak256('Call(uint256 deadline,uint256 nonce,address target,uint256 value,bytes calldata,uint256 gasLimit)');
 
   /// @notice The address of the proposer multicall contract
   address public immutable PROPOSER_MULTICALL;
@@ -109,10 +112,13 @@ abstract contract TrustlessProposer is IProposer, EIP712 {
   /// @dev Has a whitelist check to enforce an authorized caller
   /// @dev Used to allow for contracts to make arbitrary calls for an EOA
   function call(address _target, bytes calldata _data, uint256 _value) external returns (bool) {
+    // The estimated gas used is not perfect but provides a meaningful bound to know if we went over the gas limit
+    uint256 _startGas = gasleft();
+
     if (msg.sender != PROPOSER_MULTICALL && address(this) != msg.sender) revert Unauthorized();
 
-    (bytes memory _sig, uint256 _deadline, uint256 _nonce, bytes memory _calldata) =
-      abi.decode(_data, (bytes, uint256, uint256, bytes));
+    (bytes memory _sig, uint256 _deadline, uint256 _nonce, bytes memory _calldata, uint256 _gasLimit) =
+      abi.decode(_data, (bytes, uint256, uint256, bytes, uint256));
 
     // Revert if deadline has passed
     // This prevents external services from holding onto the transaction
@@ -126,7 +132,7 @@ abstract contract TrustlessProposer is IProposer, EIP712 {
 
     // Recover the signer from the signature
     bytes32 _messageHash =
-      _hashTypedDataV4(keccak256(abi.encode(CALL_TYPEHASH, _deadline, _nonce, _target, _value, _calldata)));
+      _hashTypedDataV4(keccak256(abi.encode(CALL_TYPEHASH, _deadline, _nonce, _target, _value, _calldata, _gasLimit)));
 
     // Signature values
     uint8 v;
@@ -153,6 +159,11 @@ abstract contract TrustlessProposer is IProposer, EIP712 {
 
     unchecked {
       nestedNonce = _currentNonce + 1;
+    }
+
+    // If gas used is greater than gasLimit, revert
+    if (_startGas - gasleft() > _gasLimit) {
+      revert GasLimitExceeded();
     }
 
     return true;
