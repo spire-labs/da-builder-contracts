@@ -8,7 +8,7 @@ import {IProposer} from 'interfaces/proposer/IProposer.sol';
 ///
 /// @dev An example implementation of a proposer contract that is compatible with the aggregation service
 ///      Intended to be set as an EOA account code (EIP-7702)
-///      This contract is meant to be an example implementation, and is stateless for the sake of simple storage management
+///      This contract is meant to be an example implementation
 ///
 /// @dev This version is an example of how a TrustlessProposer would be implemented
 ///      Requires custom encoding of calldata before submitting to DA Builder
@@ -146,13 +146,13 @@ abstract contract TrustlessProposer is IProposer, EIP712 {
     // EIP-7702 account needs to be the signer
     if (_signer != address(this)) revert SignatureInvalid();
 
+    unchecked {
+      nestedNonce = _currentNonce + 1;
+    }
+
     (bool _success,) = _target.call{value: _value}(_calldata);
     if (!_success) {
       revert LowLevelCallFailed();
-    }
-
-    unchecked {
-      nestedNonce = _currentNonce + 1;
     }
 
     return true;
