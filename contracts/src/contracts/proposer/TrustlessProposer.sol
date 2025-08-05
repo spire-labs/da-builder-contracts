@@ -8,7 +8,7 @@ import {IProposer} from 'interfaces/proposer/IProposer.sol';
 ///
 /// @dev An example implementation of a proposer contract that is compatible with the aggregation service
 ///      Intended to be set as an EOA account code (EIP-7702)
-///      This contract is meant to be an example implementation, and is stateless for the sake of simple storage management
+///      This contract is meant to be an example implementation
 ///
 /// @dev This version is an example of how a TrustlessProposer would be implemented
 ///      Requires custom encoding of calldata before submitting to DA Builder
@@ -25,9 +25,12 @@ abstract contract TrustlessProposer is IProposer, EIP712 {
   /// @notice Error thrown when the signature is invalid
   error SignatureInvalid();
 
+  /// @notice Error thrown when the gas limit is exceeded
+  error GasLimitExceeded();
+
   /// @notice The typehash for the call struct
   bytes32 public constant CALL_TYPEHASH =
-    keccak256('Call(uint256 deadline,uint256 nonce,address target,uint256 value,bytes calldata)');
+    keccak256('Call(uint256 deadline,uint256 nonce,address target,uint256 value,bytes calldata,uint256 gasLimit)');
 
   /// @notice The address of the proposer multicall contract
   address public immutable PROPOSER_MULTICALL;
@@ -109,10 +112,13 @@ abstract contract TrustlessProposer is IProposer, EIP712 {
   /// @dev Has a whitelist check to enforce an authorized caller
   /// @dev Used to allow for contracts to make arbitrary calls for an EOA
   function call(address _target, bytes calldata _data, uint256 _value) external returns (bool) {
+    // The estimated gas used is not perfect but provides a meaningful bound to know if we went over the gas limit
+    uint256 _startGas = gasleft();
+
     if (msg.sender != PROPOSER_MULTICALL && address(this) != msg.sender) revert Unauthorized();
 
-    (bytes memory _sig, uint256 _deadline, uint256 _nonce, bytes memory _calldata) =
-      abi.decode(_data, (bytes, uint256, uint256, bytes));
+    (bytes memory _sig, uint256 _deadline, uint256 _nonce, bytes memory _calldata, uint256 _gasLimit) =
+      abi.decode(_data, (bytes, uint256, uint256, bytes, uint256));
 
     // Revert if deadline has passed
     // This prevents external services from holding onto the transaction
@@ -125,36 +131,60 @@ abstract contract TrustlessProposer is IProposer, EIP712 {
     if (_currentNonce != _nonce) revert NonceTooLow();
 
     // Recover the signer from the signature
-    bytes32 _messageHash =
-      _hashTypedDataV4(keccak256(abi.encode(CALL_TYPEHASH, _deadline, _nonce, _target, _value, _calldata)));
+    bytes32 _messageHash = _hashTypedDataV4(_deadline, _nonce, _target, _value, _calldata, _gasLimit);
 
-    // Signature values
+    address _signer = _getSignerFromSignature(_messageHash, _sig);
+
+    // EIP-7702 account needs to be the signer
+    if (_signer != address(this)) revert SignatureInvalid();
+
+    unchecked {
+      nestedNonce = _currentNonce + 1;
+    }
+
+    (bool _success,) = _target.call{value: _value}(_calldata);
+    if (!_success) {
+      revert LowLevelCallFailed();
+    }
+    
+    return true;
+  }
+
+  /// @notice Hashes the typed data for the call
+  ///
+  /// @param _deadline The deadline for the call
+  /// @param _nonce The nonce for the call
+  /// @param _target The target for the call
+  /// @param _value The value for the call
+  function _hashTypedDataV4(
+    uint256 _deadline,
+    uint256 _nonce,
+    address _target,
+    uint256 _value,
+    bytes memory _calldata,
+    uint256 _gasLimit
+  ) internal view returns (bytes32) {
+    return
+      _hashTypedDataV4(keccak256(abi.encode(CALL_TYPEHASH, _deadline, _nonce, _target, _value, _calldata, _gasLimit)));
+  }
+
+  /// @notice Gets the signer from the signature
+  ///
+  /// @param _messageHash The message hash to recover the signer from
+  /// @param _sig The signature to recover the signer from
+  ///
+  /// @return The signer address
+  function _getSignerFromSignature(bytes32 _messageHash, bytes memory _sig) internal pure returns (address) {
     uint8 v;
     bytes32 r;
     bytes32 s;
 
-    // ecrecover takes the signature parameters
-    /// @solidity memory-safe-assembly
     assembly {
       r := mload(add(_sig, 0x20))
       s := mload(add(_sig, 0x40))
       v := byte(0, mload(add(_sig, 0x60)))
     }
 
-    address _signer = ecrecover(_messageHash, v, r, s);
-
-    // EIP-7702 account needs to be the signer
-    if (_signer != address(this)) revert SignatureInvalid();
-
-    (bool _success,) = _target.call{value: _value}(_calldata);
-    if (!_success) {
-      revert LowLevelCallFailed();
-    }
-
-    unchecked {
-      nestedNonce = _currentNonce + 1;
-    }
-
-    return true;
+    return ecrecover(_messageHash, v, r, s);
   }
 }

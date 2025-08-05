@@ -8,6 +8,9 @@ import {IProposer} from 'interfaces/proposer/IProposer.sol';
 /// @dev An example implementation of a proposer contract that is compatible with the aggregation service
 ///      Intended to be set as an EOA account code (EIP-7702)
 ///      This contract is meant to be an example implementation, and is stateless for the sake of simple storage management
+///
+/// @dev WARNING: This contract trusts the multicall contract to be honest since it has unrestricted access to the call function
+///      We recommend using this setup with accounts that are heavily restricted or using the TrustlessProposer instead
 contract Proposer is IProposer {
   /// @notice The address of the proposer multicall contract
   address public immutable PROPOSER_MULTICALL;
