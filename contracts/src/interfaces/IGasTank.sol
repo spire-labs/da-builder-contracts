@@ -23,6 +23,9 @@ interface IGasTank {
   /// @notice Event emitted when an account makes a deposit
   event AccountDeposited(address _operator, uint256 _newBalance);
 
+  /// @notice Event emitted when the builder is set
+  event BuilderSet(address _builder);
+
   /// @notice Struct for charging an account
   /// @param charge The amount to charge
   /// @param operator The address of the account to charge

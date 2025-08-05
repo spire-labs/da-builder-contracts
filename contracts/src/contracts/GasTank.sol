@@ -11,7 +11,7 @@ import {ISemver} from 'interfaces/utils/ISemver.sol';
 /// @notice Contract for rollups to deposit funds for the aggregator service to charge from
 contract GasTank is IGasTank, ISemver, UUPSUpgradeable, OwnableUpgradeable {
   /// @notice The version of the contract
-  string internal constant _VERSION = '1.0.0';
+  string internal constant _VERSION = '1.0.1';
 
   /// @notice The delay before an account can be closed
   uint256 public constant WITHDRAWAL_DELAY = 7 days;
@@ -54,6 +54,8 @@ contract GasTank is IGasTank, ISemver, UUPSUpgradeable, OwnableUpgradeable {
     address _builder
   ) external onlyOwner {
     builder = _builder;
+
+    emit BuilderSet(_builder);
   }
 
   /// @notice Charge an account
@@ -121,10 +123,10 @@ contract GasTank is IGasTank, ISemver, UUPSUpgradeable, OwnableUpgradeable {
   /// @notice Charge an account
   ///
   /// @param _account The account to charge
-  /// @param _proxyAdmin The admin of the proxy, should receive the funds
-  function _charge(Account calldata _account, address _proxyAdmin) internal {
+  /// @param _recipient The admin of the proxy, should receive the funds
+  function _charge(Account calldata _account, address _recipient) internal {
     balances[_account.operator] -= _account.charge;
-    (bool _success,) = _proxyAdmin.call{value: _account.charge}('');
+    (bool _success,) = _recipient.call{value: _account.charge}('');
     if (!_success) {
       revert FailedLowLevelCall();
     }
