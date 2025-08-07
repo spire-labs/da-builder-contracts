@@ -3,7 +3,7 @@ pragma solidity 0.8.30;
 
 import {GasTank} from 'contracts/GasTank.sol';
 import {ProposerMulticall} from 'contracts/ProposerMulticall.sol';
-
+import {SetNumber} from 'contracts/devnet/SetNumber.sol';
 import {OPStackProposer} from 'contracts/proposer/OPStackProposer.sol';
 import {Proposer} from 'contracts/proposer/Proposer.sol';
 import {TrustlessProposerEntry} from 'contracts/proposer/TrustlessProposerEntry.sol';
@@ -44,6 +44,8 @@ contract Deploy is Script {
     console.log('TrustlessProposer deployed to: ', address(trustlessProposer));
     OPStackProposer opStackProposer = new OPStackProposer(address(proposerMulticall));
     console.log('OPStackProposer deployed to: ', address(opStackProposer));
+    SetNumber setNumber = new SetNumber();
+    console.log('SetNumber deployed to: ', address(setNumber));
     vm.stopBroadcast();
 
     // Set the authorization list
