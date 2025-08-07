@@ -4,7 +4,7 @@ pragma solidity 0.8.30;
 import {IProposer} from 'interfaces/proposer/IProposer.sol';
 
 /// @title Proposer
-
+///
 /// @dev ⚠ SECURITY WARNING:  This contract provides FULL ARBITRARY CALL PRIVILEGES
 ///       to the ProposerMulticall contract. Use with extreme caution.
 ///

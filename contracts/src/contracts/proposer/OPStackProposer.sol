@@ -5,15 +5,15 @@ import {IProposer} from 'interfaces/proposer/IProposer.sol';
 
 /// @title OPStackProposer
 ///
+/// @dev ⚠ SECURITY WARNING:  This contract provides FULL ARBITRARY CALL PRIVILEGES
+///       to the ProposerMulticall contract. Use with extreme caution.
+///
 /// @dev An example implementation of a proposer contract that is compatible with the aggregation service
 ///      Intended to be set as an EOA account code (EIP-7702)
 ///      This contract is meant to be an example implementation, and is stateless for the sake of simple storage management
 ///
 /// @dev This version is an example of how an OPStackProposer would be implemented
 ///      Requires custom encoding of calldata before submitting to DA Builder
-///
-/// @dev WARNING: This contract trusts the multicall contract to be honest since it has unrestricted access to the call function.
-///      We recommend using this setup with accounts that are heavily restricted or using the TrustlessProposer instead
 contract OPStackProposer is IProposer {
   /// @notice Event emitted when a blob is submitted
   ///
