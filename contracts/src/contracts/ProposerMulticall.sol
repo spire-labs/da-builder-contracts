@@ -12,7 +12,7 @@ import {IProposer} from 'interfaces/proposer/IProposer.sol';
 /// @notice Contract for us to multicall neccessary proposer functions
 contract ProposerMulticall is IProposerMulticall, OwnableUpgradeable, UUPSUpgradeable {
   /// @notice The version of the contract
-  string internal constant _VERSION = '1.0.0';
+  string internal constant _VERSION = '1.0.1';
 
   /// @notice The builder address
   ///
@@ -45,13 +45,11 @@ contract ProposerMulticall is IProposerMulticall, OwnableUpgradeable, UUPSUpgrad
     uint256 _callsLength = _calls.length;
     uint256[] memory _internalCallsGasUsed = new uint256[](_callsLength);
 
-    uint256 _msgValueSummation;
     uint256 _preCallGasLeft;
     uint256 _gasUsed;
     bytes memory _callData;
 
     for (uint256 i; i < _callsLength; ++i) {
-      _msgValueSummation += _calls[i].value;
       _callData = abi.encodeCall(IProposer.call, (_calls[i].target, _calls[i].data, _calls[i].value));
       _preCallGasLeft = gasleft();
       (bool _success, bytes memory _retdata) = _calls[i].proposer.call(_callData);

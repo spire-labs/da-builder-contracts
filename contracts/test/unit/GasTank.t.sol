@@ -45,6 +45,8 @@ contract Unit_GasTank_authorizeUpgrade is Base {
 }
 
 contract Unit_GasTank_setBuilder is Base {
+  event BuilderSet(address _builder);
+
   /// @dev Tests that the `setBuilder` function reverts if the caller is not the owner
   function test_setBuilder_onlyOwner_reverts() public {
     vm.expectRevert(abi.encodeWithSelector(OwnableUnauthorizedAccount.selector, nonOperator));
@@ -58,6 +60,15 @@ contract Unit_GasTank_setBuilder is Base {
     gasTank.setBuilder(nonOperator);
 
     assertEq(gasTank.builder(), nonOperator);
+  }
+
+  /// @dev Tests that the `setBuilder` function emits an event
+  function test_setBuilder_emitsEvent() public {
+    vm.expectEmit(true, true, true, true);
+    emit BuilderSet(nonOperator);
+
+    vm.prank(owner);
+    gasTank.setBuilder(nonOperator);
   }
 }
 

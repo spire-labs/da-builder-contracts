@@ -146,7 +146,9 @@ abstract contract TrustlessProposer is IProposer, EIP712 {
     if (!_success) {
       revert LowLevelCallFailed();
     }
-    
+
+    if (_startGas - gasleft() > _gasLimit) revert GasLimitExceeded();
+
     return true;
   }
 
