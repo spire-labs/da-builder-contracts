@@ -302,6 +302,83 @@ contract Unit_GasTank_deposit is Base {
   }
 }
 
+contract Unit_GasTank_depositOnBehalfOf is Base {
+  event AccountDeposited(address _operator, uint256 _newBalance);
+
+  address beneficiary = makeAddr('beneficiary');
+
+  /// @dev Tests that the `deposit` function reverts if an account is being closed
+  function test_depositOnBehalfOf_accountClosing_reverts() public {
+    vm.deal(operator, 200);
+
+    vm.prank(operator);
+    gasTank.deposit{value: 100}(beneficiary);
+
+    vm.prank(beneficiary);
+    gasTank.initiateAccountClose();
+
+    vm.expectRevert(abi.encodeWithSelector(IGasTank.AccountClosing.selector));
+    vm.prank(operator);
+    gasTank.deposit{value: 100}(beneficiary);
+  }
+
+  /// @dev Tests that the `deposit` function succeeds
+  function test_depositOnBehalfOf_succeeds() public {
+    vm.deal(operator, 100);
+
+    vm.prank(operator);
+    gasTank.deposit{value: 100}(beneficiary);
+
+    assertEq(gasTank.balances(beneficiary), 100);
+    assertEq(address(gasTank).balance, 100);
+  }
+
+  /// @dev Tests that the `deposit` function emits an event
+  function test_depositOnBehalfOf_emitsEvent() public {
+    vm.deal(operator, 100);
+
+    vm.expectEmit(true, true, true, true);
+    emit AccountDeposited(beneficiary, 100);
+
+    vm.prank(operator);
+    gasTank.deposit{value: 100}(beneficiary);
+  }
+
+  /// @dev Tests that the `deposit` function works with fuzzing
+  function testFuzz_depositOnBehalfOf_succeeds(uint256 deposit, address randomBeneficiary) public {
+    vm.deal(operator, deposit);
+    vm.assume(randomBeneficiary != operator);
+
+    vm.prank(operator);
+    gasTank.deposit{value: deposit}(randomBeneficiary);
+
+    assertEq(gasTank.balances(randomBeneficiary), deposit);
+    assertEq(address(gasTank).balance, deposit);
+  }
+
+  /// @dev Tests that the `deposit` works with multiple different deposits
+  function testFuzz_depositOnBehalfOf_multipleDeposits_succeeds(
+    uint256[] memory deposits,
+    address randomBeneficiary
+  ) public {
+    vm.deal(operator, type(uint256).max);
+    vm.assume(deposits.length < 10);
+    vm.assume(randomBeneficiary != operator);
+
+    for (uint256 i; i < deposits.length; i++) {
+      vm.assume(deposits[i] < 1e40);
+      uint256 _balanceBefore = gasTank.balances(randomBeneficiary);
+      uint256 _contractBalanceBefore = address(gasTank).balance;
+
+      vm.prank(operator);
+      gasTank.deposit{value: deposits[i]}(randomBeneficiary);
+
+      assertEq(gasTank.balances(randomBeneficiary), _balanceBefore + deposits[i]);
+      assertEq(address(gasTank).balance, _contractBalanceBefore + deposits[i]);
+    }
+  }
+}
+
 contract Unit_GasTank_initiateAccountClose is Base {
   event AccountCloseInitiated(address _operator);
 

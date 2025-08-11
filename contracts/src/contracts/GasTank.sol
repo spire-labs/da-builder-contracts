@@ -85,8 +85,17 @@ contract GasTank is IGasTank, ISemver, UUPSUpgradeable, OwnableUpgradeable {
   }
 
   /// @notice Deposit funds into the account manager for an account
+  ///
+  /// @param _operator The address of the account to deposit into
+  function deposit(
+    address _operator
+  ) external payable {
+    _deposit(_operator);
+  }
+
+  /// @notice Deposit funds into the account manager for an account
   function deposit() external payable {
-    _deposit();
+    _deposit(msg.sender);
   }
 
   /// @notice Initiate an account to be closed
@@ -133,15 +142,19 @@ contract GasTank is IGasTank, ISemver, UUPSUpgradeable, OwnableUpgradeable {
   }
 
   /// @notice Deposit funds into the account manager for an account
-  function _deposit() internal {
-    if (withdrawalStartedAt[msg.sender] != 0) revert AccountClosing();
+  ///
+  /// @param _operator The address of the account to deposit into
+  function _deposit(
+    address _operator
+  ) internal {
+    if (withdrawalStartedAt[_operator] != 0) revert AccountClosing();
 
-    uint256 _balance = balances[msg.sender];
+    uint256 _balance = balances[_operator];
     uint256 _newBalance = _balance + msg.value;
 
-    balances[msg.sender] = _newBalance;
+    balances[_operator] = _newBalance;
 
-    emit AccountDeposited(msg.sender, _newBalance);
+    emit AccountDeposited(_operator, _newBalance);
   }
 
   /// @notice Authorizes the upgrade
@@ -157,6 +170,6 @@ contract GasTank is IGasTank, ISemver, UUPSUpgradeable, OwnableUpgradeable {
   }
 
   receive() external payable {
-    _deposit();
+    _deposit(msg.sender);
   }
 }
