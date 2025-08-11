@@ -65,6 +65,23 @@ contract Integration_GasTank is Base {
     assertEq(address(proxyAdmin).balance, 100 ether);
   }
 
+  /// @dev Tests that deposit for a beneficiary works
+  function test_deposit_for_beneficiary_succeeds() public {
+    address _user = makeAddr('user');
+    address _beneficiary = makeAddr('beneficiary');
+
+    vm.deal(_user, 100 ether);
+
+    uint256 _balanceBefore = gasTank.balances(_beneficiary);
+    uint256 _contractBalanceBefore = address(gasTank).balance;
+
+    vm.prank(_user);
+    gasTank.deposit{value: 100 ether}(_beneficiary);
+
+    assertEq(gasTank.balances(_beneficiary), _balanceBefore + 100 ether);
+    assertEq(address(gasTank).balance, _contractBalanceBefore + 100 ether);
+  }
+
   /// @dev Tests a partial charge on the account
   function test_partial_charge_succeeds() public {
     address _user = makeAddr('user');

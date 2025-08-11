@@ -39,6 +39,9 @@ interface IGasTank {
     address _builder
   ) external;
   function deposit() external payable;
+  function deposit(
+    address _operator
+  ) external payable;
   function charge(
     Account calldata _account
   ) external;
