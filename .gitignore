@@ -1,6 +1,8 @@
 /target
 .env
 
+contracts/lib/**
+!contracts/lib/forge-std
 contracts/.github/
 contracts/.gitignore
 contracts/cache
