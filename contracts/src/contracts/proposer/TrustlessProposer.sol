@@ -2,6 +2,7 @@
 pragma solidity 0.8.30;
 
 import {EIP712} from '@openzeppelin/contracts/utils/cryptography/EIP712.sol';
+import {ECDSA} from '@openzeppelin/contracts/utils/cryptography/ECDSA.sol';
 import {IProposer} from 'interfaces/proposer/IProposer.sol';
 
 /// @title TrustlessProposer
@@ -75,11 +76,6 @@ abstract contract TrustlessProposer is IProposer, EIP712 {
   ) external pure returns (bytes4) {
     return this.onERC1155BatchReceived.selector;
   }
-
-  /// @notice  nothing to do here
-  ///
-  /// @dev     this contract can accept ETH with calldata, hence payable
-  fallback() external payable {}
 
   /// @notice  EIP-1155 implementation
   /// we pretty much only need to signal that we support the interface for 165, but for 1155 we also need the fallback function
@@ -177,16 +173,8 @@ abstract contract TrustlessProposer is IProposer, EIP712 {
   ///
   /// @return The signer address
   function _getSignerFromSignature(bytes32 _messageHash, bytes memory _sig) internal pure returns (address) {
-    uint8 v;
-    bytes32 r;
-    bytes32 s;
-
-    assembly {
-      r := mload(add(_sig, 0x20))
-      s := mload(add(_sig, 0x40))
-      v := byte(0, mload(add(_sig, 0x60)))
-    }
-
-    return ecrecover(_messageHash, v, r, s);
+    (address _signer, ECDSA.RecoverError _error,) = ECDSA.tryRecover(_messageHash, _sig);
+    if (_error != ECDSA.RecoverError.NoError) revert SignatureInvalid();
+    return _signer;
   }
 }

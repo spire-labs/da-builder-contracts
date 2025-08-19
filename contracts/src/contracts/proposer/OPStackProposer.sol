@@ -63,11 +63,6 @@ contract OPStackProposer is IProposer {
     return this.onERC1155BatchReceived.selector;
   }
 
-  /// @notice  nothing to do here
-  ///
-  /// @dev     this contract can accept ETH with calldata, hence payable
-  fallback() external payable {}
-
   /// @notice  EIP-1155 implementation
   /// we pretty much only need to signal that we support the interface for 165, but for 1155 we also need the fallback function
   ///
