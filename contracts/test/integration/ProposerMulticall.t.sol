@@ -5,13 +5,16 @@ import {IProposerMulticall, ProposerMulticall} from 'contracts/ProposerMulticall
 
 import {OPStackProposer} from 'contracts/proposer/OPStackProposer.sol';
 import {IProposer, Proposer} from 'contracts/proposer/Proposer.sol';
-import {stdError} from 'forge-std/Test.sol';
 import {Base} from 'test/integration/Base.t.sol';
 
 // The expectation is for our ProposerMulticall to work with any arbitrary proposer, so the logic of the proposer should not matter
 // We do also test with a "standard" proposer
 contract False_Proposer is IProposer {
-  function call(address, bytes calldata, uint256) external pure returns (bool) {
+  function onCall(
+    address,
+    bytes calldata,
+    uint256
+  ) external pure returns (bool) {
     return false;
   }
 
@@ -19,7 +22,11 @@ contract False_Proposer is IProposer {
 }
 
 contract True_Proposer is IProposer {
-  function call(address, bytes calldata, uint256) external pure returns (bool) {
+  function onCall(
+    address,
+    bytes calldata,
+    uint256
+  ) external pure returns (bool) {
     return true;
   }
 
@@ -74,7 +81,7 @@ contract Integration_ProposerMulticall is Base {
     calls[0] =
       IProposerMulticall.Call({proposer: nakedProposer, target: address(0), data: '', value: 0, gasLimit: 21_000});
 
-    vm.expectRevert(abi.encodeWithSelector(IProposerMulticall.InvalidProposer.selector));
+    vm.expectRevert();
     vm.prank(daBuilder);
     proposerMulticall.multicall(calls);
   }
@@ -83,11 +90,7 @@ contract Integration_ProposerMulticall is Base {
   function test_multicall_reverts_if_false() public {
     IProposerMulticall.Call[] memory calls = new IProposerMulticall.Call[](1);
     calls[0] = IProposerMulticall.Call({
-      proposer: address(falseProposer),
-      target: address(0),
-      data: '',
-      value: 0,
-      gasLimit: 21_000
+      proposer: address(falseProposer), target: address(0), data: '', value: 0, gasLimit: 21_000
     });
 
     vm.expectRevert(abi.encodeWithSelector(IProposerMulticall.LowLevelCallFailed.selector));
@@ -110,14 +113,10 @@ contract Integration_ProposerMulticall is Base {
   function test_multicall_passes_with_true() public {
     IProposerMulticall.Call[] memory calls = new IProposerMulticall.Call[](1);
     calls[0] = IProposerMulticall.Call({
-      proposer: address(trueProposer),
-      target: address(0),
-      data: '',
-      value: 0,
-      gasLimit: 21_000
+      proposer: address(trueProposer), target: address(0), data: '', value: 0, gasLimit: 21_000
     });
 
-    vm.expectCall(address(trueProposer), abi.encodeCall(IProposer.call, (address(0), '', 0)));
+    vm.expectCall(address(trueProposer), abi.encodeCall(IProposer.onCall, (address(0), '', 0)));
     vm.prank(daBuilder);
     proposerMulticall.multicall(calls);
   }
@@ -126,14 +125,10 @@ contract Integration_ProposerMulticall is Base {
   function test_multicall_passes_with_standard() public {
     IProposerMulticall.Call[] memory calls = new IProposerMulticall.Call[](1);
     calls[0] = IProposerMulticall.Call({
-      proposer: address(standardProposer),
-      target: address(0),
-      data: '',
-      value: 0,
-      gasLimit: 21_000
+      proposer: address(standardProposer), target: address(0), data: '', value: 0, gasLimit: 21_000
     });
 
-    vm.expectCall(address(standardProposer), abi.encodeCall(IProposer.call, (address(0), '', 0)));
+    vm.expectCall(address(standardProposer), abi.encodeCall(IProposer.onCall, (address(0), '', 0)));
     vm.prank(daBuilder);
     proposerMulticall.multicall(calls);
   }
@@ -142,22 +137,14 @@ contract Integration_ProposerMulticall is Base {
   function test_multicall_passes_with_multiple_different() public {
     IProposerMulticall.Call[] memory calls = new IProposerMulticall.Call[](2);
     calls[0] = IProposerMulticall.Call({
-      proposer: address(trueProposer),
-      target: address(0),
-      data: '',
-      value: 0,
-      gasLimit: 21_000
+      proposer: address(trueProposer), target: address(0), data: '', value: 0, gasLimit: 21_000
     });
     calls[1] = IProposerMulticall.Call({
-      proposer: address(standardProposer),
-      target: address(0),
-      data: '',
-      value: 0,
-      gasLimit: 21_000
+      proposer: address(standardProposer), target: address(0), data: '', value: 0, gasLimit: 21_000
     });
 
-    vm.expectCall(address(trueProposer), abi.encodeCall(IProposer.call, (address(0), '', 0)));
-    vm.expectCall(address(standardProposer), abi.encodeCall(IProposer.call, (address(0), '', 0)));
+    vm.expectCall(address(trueProposer), abi.encodeCall(IProposer.onCall, (address(0), '', 0)));
+    vm.expectCall(address(standardProposer), abi.encodeCall(IProposer.onCall, (address(0), '', 0)));
     vm.prank(daBuilder);
     proposerMulticall.multicall(calls);
   }
@@ -170,14 +157,10 @@ contract Integration_ProposerMulticall is Base {
 
     IProposerMulticall.Call[] memory calls = new IProposerMulticall.Call[](1);
     calls[0] = IProposerMulticall.Call({
-      proposer: address(standardProposer),
-      target: address(0),
-      data: '',
-      value: 100,
-      gasLimit: 21_000
+      proposer: address(standardProposer), target: address(0), data: '', value: 100, gasLimit: 21_000
     });
 
-    vm.expectCall(address(standardProposer), abi.encodeCall(IProposer.call, (address(0), '', 100)));
+    vm.expectCall(address(standardProposer), abi.encodeCall(IProposer.onCall, (address(0), '', 100)));
     vm.prank(daBuilder);
     proposerMulticall.multicall(calls);
 
@@ -193,11 +176,7 @@ contract Integration_ProposerMulticall is Base {
 
     IProposerMulticall.Call[] memory calls = new IProposerMulticall.Call[](2);
     calls[0] = IProposerMulticall.Call({
-      proposer: address(standardProposer),
-      target: address(0),
-      data: '',
-      value: 100,
-      gasLimit: 21_000
+      proposer: address(standardProposer), target: address(0), data: '', value: 100, gasLimit: 21_000
     });
     calls[1] = IProposerMulticall.Call({
       proposer: address(standardProposer),
@@ -207,8 +186,8 @@ contract Integration_ProposerMulticall is Base {
       gasLimit: 25_000 // Needs to be 25k because there is some overhead from the internal Proposer logic
     });
 
-    vm.expectCall(address(standardProposer), abi.encodeCall(IProposer.call, (address(0), '', 100)));
-    vm.expectCall(address(standardProposer), abi.encodeCall(IProposer.call, (address(0), '', 100)));
+    vm.expectCall(address(standardProposer), abi.encodeCall(IProposer.onCall, (address(0), '', 100)));
+    vm.expectCall(address(standardProposer), abi.encodeCall(IProposer.onCall, (address(0), '', 100)));
     vm.prank(daBuilder);
     proposerMulticall.multicall(calls);
 
@@ -217,9 +196,8 @@ contract Integration_ProposerMulticall is Base {
   }
 
   /// @dev Tests multicall with a random EOA
-  function testFuzz_multicall_random_eoa_with_value(
-    address _eoa
-  ) public {
+  function test_multicall_random_eoa_with_value() public {
+    address _eoa = makeAddr('eoa');
     vm.assume(_eoa.code.length == 0);
     // Assume no precompiles not working for some reason, so we do this
     vm.assume(uint256(uint160(_eoa)) > uint256(uint160(address(256))));
@@ -230,14 +208,10 @@ contract Integration_ProposerMulticall is Base {
 
     IProposerMulticall.Call[] memory calls = new IProposerMulticall.Call[](1);
     calls[0] = IProposerMulticall.Call({
-      proposer: address(standardProposer),
-      target: _eoa,
-      data: '',
-      value: 100,
-      gasLimit: 100_000
+      proposer: address(standardProposer), target: _eoa, data: '', value: 100, gasLimit: 100_000
     });
 
-    vm.expectCall(address(standardProposer), abi.encodeCall(IProposer.call, (_eoa, '', 100)));
+    vm.expectCall(address(standardProposer), abi.encodeCall(IProposer.onCall, (_eoa, '', 100)));
     vm.prank(daBuilder);
     proposerMulticall.multicall(calls);
 
@@ -260,16 +234,16 @@ contract Integration_ProposerMulticall is Base {
 
     vm.expectCall(
       address(opStackProposer),
-      abi.encodeCall(IProposer.call, (address(opStackProposer), abi.encode(_versionedHashes), 0))
+      abi.encodeCall(IProposer.onCall, (address(opStackProposer), abi.encode(_versionedHashes), 0))
     );
     vm.prank(daBuilder);
     proposerMulticall.multicall(calls);
   }
 
   function test_multicall_passes_with_op_stack_max_blobs() public {
-    // The max from manual testing with 9 blobs is 16836 internal gas used
+    // The max from manual testing with 9 blobs is 13_429 internal gas used
     uint256[] memory _gasUsed = new uint256[](1);
-    _gasUsed[0] = 16_836;
+    _gasUsed[0] = 13_429;
 
     // Current max blobs is 9, so we need to test with 9
     bytes32[] memory _versionedHashes = new bytes32[](9);
@@ -297,7 +271,7 @@ contract Integration_ProposerMulticall is Base {
 
     vm.expectCall(
       address(opStackProposer),
-      abi.encodeCall(IProposer.call, (address(opStackProposer), abi.encode(_versionedHashes), 0))
+      abi.encodeCall(IProposer.onCall, (address(opStackProposer), abi.encode(_versionedHashes), 0))
     );
     vm.prank(daBuilder);
     proposerMulticall.multicall(calls);

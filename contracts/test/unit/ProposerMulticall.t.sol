@@ -59,26 +59,13 @@ contract Unit_ProposerMulticall_multicall is Base {
     IProposerMulticall(multicall).multicall(new IProposerMulticall.Call[](0));
   }
 
-  /// @dev Tests that multicall reverts if proposer call returns no data
-  function test_multicall_reverts_if_no_data() external {
-    IProposerMulticall.Call[] memory calls = new IProposerMulticall.Call[](1);
-
-    calls[0] = IProposerMulticall.Call(proposer, nonProposer, '', 0, 21_000);
-
-    _mockAndExpect(proposer, abi.encodeCall(IProposer.call, (nonProposer, '', 0)), abi.encode());
-
-    vm.expectRevert(abi.encodeWithSelector(IProposerMulticall.InvalidProposer.selector));
-    vm.prank(address(builder));
-    IProposerMulticall(multicall).multicall(calls);
-  }
-
   /// @dev Tests that multicall reverts if proposer call returns false
   function test_multicall_reverts_if_false() external {
     IProposerMulticall.Call[] memory calls = new IProposerMulticall.Call[](1);
 
     calls[0] = IProposerMulticall.Call(proposer, nonProposer, '', 0, 21_000);
 
-    _mockAndExpect(proposer, abi.encodeCall(IProposer.call, (nonProposer, '', 0)), abi.encode(false));
+    _mockAndExpect(proposer, abi.encodeCall(IProposer.onCall, (nonProposer, '', 0)), abi.encode(false));
 
     vm.expectRevert(abi.encodeWithSelector(IProposerMulticall.LowLevelCallFailed.selector));
     vm.prank(address(builder));
@@ -90,7 +77,7 @@ contract Unit_ProposerMulticall_multicall is Base {
     IProposerMulticall.Call[] memory calls = new IProposerMulticall.Call[](1);
     calls[0] = IProposerMulticall.Call(proposer, nonProposer, '', 0, 0);
 
-    _mockAndExpect(proposer, abi.encodeCall(IProposer.call, (nonProposer, '', 0)), abi.encode(true));
+    _mockAndExpect(proposer, abi.encodeCall(IProposer.onCall, (nonProposer, '', 0)), abi.encode(true));
 
     vm.expectRevert(abi.encodeWithSelector(IProposerMulticall.OutOfGas.selector));
     vm.prank(address(builder));
@@ -103,7 +90,7 @@ contract Unit_ProposerMulticall_multicall is Base {
 
     calls[0] = IProposerMulticall.Call(proposer, nonProposer, '', 0, 21_000);
 
-    _mockAndExpect(proposer, abi.encodeCall(IProposer.call, (nonProposer, '', 0)), abi.encode(true));
+    _mockAndExpect(proposer, abi.encodeCall(IProposer.onCall, (nonProposer, '', 0)), abi.encode(true));
 
     vm.prank(address(builder));
     IProposerMulticall(multicall).multicall(calls);
@@ -117,7 +104,7 @@ contract Unit_ProposerMulticall_multicall is Base {
 
     calls[0] = IProposerMulticall.Call(proposer, nonProposer, '', 100, 21_000);
 
-    _mockAndExpect(proposer, abi.encodeCall(IProposer.call, (nonProposer, '', 100)), abi.encode(true));
+    _mockAndExpect(proposer, abi.encodeCall(IProposer.onCall, (nonProposer, '', 100)), abi.encode(true));
 
     vm.prank(address(builder));
     IProposerMulticall(multicall).multicall(calls);
@@ -130,7 +117,7 @@ contract Unit_ProposerMulticall_multicall is Base {
     IProposerMulticall.Call[] memory calls = new IProposerMulticall.Call[](1);
     calls[0] = IProposerMulticall.Call(proposer, nonProposer, '', 100, 21_000);
 
-    vm.mockCallRevert(proposer, abi.encodeCall(IProposer.call, (nonProposer, '', 100)), abi.encode(true));
+    _mockAndExpect(proposer, abi.encodeCall(IProposer.onCall, (nonProposer, '', 100)), abi.encode(false));
 
     vm.expectRevert(abi.encodeWithSelector(IProposerMulticall.LowLevelCallFailed.selector));
     vm.prank(address(builder));
@@ -146,8 +133,8 @@ contract Unit_ProposerMulticall_multicall is Base {
     calls[0] = IProposerMulticall.Call(proposer, nonProposer, '', 100, 21_000);
     calls[1] = IProposerMulticall.Call(proposer, nonProposer2, '', 100, 21_000);
 
-    _mockAndExpect(proposer, abi.encodeCall(IProposer.call, (nonProposer, '', 100)), abi.encode(true));
-    _mockAndExpect(proposer, abi.encodeCall(IProposer.call, (nonProposer2, '', 100)), abi.encode(true));
+    _mockAndExpect(proposer, abi.encodeCall(IProposer.onCall, (nonProposer, '', 100)), abi.encode(true));
+    _mockAndExpect(proposer, abi.encodeCall(IProposer.onCall, (nonProposer2, '', 100)), abi.encode(true));
 
     vm.prank(address(builder));
     IProposerMulticall(multicall).multicall(calls);
@@ -157,22 +144,25 @@ contract Unit_ProposerMulticall_multicall is Base {
   function test_multicall_emits_internalGasUsed() external {
     uint256[] memory _internalCallsGasUsed = new uint256[](1);
     // This is the amount expected from the mock
-    _internalCallsGasUsed[0] = 1050;
+    _internalCallsGasUsed[0] = 1684;
 
     IProposerMulticall.Call[] memory calls = new IProposerMulticall.Call[](1);
-    calls[0] = IProposerMulticall.Call(proposer, nonProposer, '', 0, 1214);
+    calls[0] = IProposerMulticall.Call(proposer, nonProposer, '', 0, 2580);
 
     vm.expectEmit(true, true, true, true);
     emit IProposerMulticall.InternalGasUsed(_internalCallsGasUsed);
 
-    _mockAndExpect(proposer, abi.encodeCall(IProposer.call, (nonProposer, '', 0)), abi.encode(true));
+    _mockAndExpect(proposer, abi.encodeCall(IProposer.onCall, (nonProposer, '', 0)), abi.encode(true));
 
     vm.prank(address(builder));
     IProposerMulticall(multicall).multicall(calls);
   }
 
   /// @dev Tests that multicall succeeds with fuzzing
-  function testFuzz_multicall_succeeds(IProposerMulticall.Call[] memory calls, uint256 summationValue) public {
+  function testFuzz_multicall_succeeds(
+    IProposerMulticall.Call[] memory calls,
+    uint256 summationValue
+  ) public {
     vm.assume(calls.length < 10);
     summationValue = bound(summationValue, 1e8 * 10, type(uint256).max - 1);
 
@@ -185,7 +175,7 @@ contract Unit_ProposerMulticall_multicall is Base {
       vm.deal(calls[i].proposer, calls[i].value);
       _mockAndExpect(
         calls[i].proposer,
-        abi.encodeCall(IProposer.call, (calls[i].target, calls[i].data, calls[i].value)),
+        abi.encodeCall(IProposer.onCall, (calls[i].target, calls[i].data, calls[i].value)),
         abi.encode(true)
       );
     }
@@ -197,7 +187,10 @@ contract Unit_ProposerMulticall_multicall is Base {
 
 contract Unit_ProposerMulticall_receive is Base {
   /// @dev Tests that receive succeeds
-  function testFuzz_receive_succeeds(address _sender, uint256 _amount) public {
+  function testFuzz_receive_succeeds(
+    address _sender,
+    uint256 _amount
+  ) public {
     vm.assume(_sender != address(builder));
 
     vm.deal(_sender, _amount);

@@ -13,4 +13,14 @@ contract SetNumber {
     if (number == 1) revert();
     number = 1;
   }
+
+  function consumeGas(
+    uint256 _gasConsumption
+  ) public {
+    uint256 _startingGas = gasleft();
+    uint256 _targetGas = _startingGas - _gasConsumption;
+    while (gasleft() > _targetGas) {
+      number++;
+    }
+  }
 }

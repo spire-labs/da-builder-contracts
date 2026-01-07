@@ -23,7 +23,10 @@ contract Base is Helpers {
 
 contract Unit_Proposer_receive is Base {
   /// @dev Tests that receive succeeds
-  function testFuzz_receive_succeeds(address _sender, uint256 _amount) public {
+  function testFuzz_receive_succeeds(
+    address _sender,
+    uint256 _amount
+  ) public {
     vm.assume(_sender != address(proposer));
 
     vm.deal(_sender, _amount);
@@ -41,7 +44,7 @@ contract Unit_Proposer_call is Base {
     vm.expectRevert(abi.encodeWithSelector(IProposer.Unauthorized.selector));
 
     vm.prank(nonProposer);
-    IProposer(proposer).call(nonProposer, '', 0);
+    IProposer(proposer).onCall(nonProposer, '', 0);
   }
 
   /// @dev Tests that call reverts if low level call fails
@@ -52,7 +55,7 @@ contract Unit_Proposer_call is Base {
     vm.expectRevert(abi.encodeWithSelector(IProposer.LowLevelCallFailed.selector));
 
     vm.prank(address(proposerMulticall));
-    IProposer(proposer).call(nonProposer, '', 100);
+    IProposer(proposer).onCall(nonProposer, '', 100);
   }
 
   /// @dev Tests that call succeeds
@@ -60,22 +63,25 @@ contract Unit_Proposer_call is Base {
     vm.deal(address(proposer), 100);
 
     vm.prank(address(proposerMulticall));
-    bool _returned_value = IProposer(proposer).call(nonProposer, '', 100);
+    bool _returnedValue = IProposer(proposer).onCall(nonProposer, '', 100);
 
     assertEq(nonProposer.balance, 100);
     assertEq(address(proposer).balance, 0);
-    assertTrue(_returned_value);
+    assertTrue(_returnedValue);
   }
 
   /// @dev Tests that call succeeds with fuzzing
-  function testFuzz_call_succeeds(uint256 _value, bytes memory _data) public {
+  function testFuzz_call_succeeds(
+    uint256 _value,
+    bytes memory _data
+  ) public {
     vm.assume(_value < 1e40);
     vm.assume(_data.length < 100);
 
     vm.deal(address(proposer), _value);
 
     vm.prank(address(proposerMulticall));
-    IProposer(proposer).call(nonProposer, _data, _value);
+    IProposer(proposer).onCall(nonProposer, _data, _value);
 
     assertEq(nonProposer.balance, _value);
     assertEq(address(proposer).balance, 0);

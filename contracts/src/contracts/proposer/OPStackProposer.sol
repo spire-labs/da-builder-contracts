@@ -39,14 +39,25 @@ contract OPStackProposer is IProposer {
   /// @dev     To support EIP 721 and EIP 1155, we need to respond to those methods with their own method signature
   ///
   /// @return  bytes4  onERC721Received function selector
-  function onERC721Received(address, address, uint256, bytes calldata) external pure returns (bytes4) {
+  function onERC721Received(
+    address,
+    address,
+    uint256,
+    bytes calldata
+  ) external pure returns (bytes4) {
     return this.onERC721Received.selector;
   }
 
   /// @dev     To support EIP 721 and EIP 1155, we need to respond to those methods with their own method signature
   ///
   /// @return  bytes4  onERC1155Received function selector
-  function onERC1155Received(address, address, uint256, uint256, bytes calldata) external pure returns (bytes4) {
+  function onERC1155Received(
+    address,
+    address,
+    uint256,
+    uint256,
+    bytes calldata
+  ) external pure returns (bytes4) {
     return this.onERC1155Received.selector;
   }
 
@@ -66,15 +77,15 @@ contract OPStackProposer is IProposer {
   /// @notice  EIP-1155 implementation
   /// we pretty much only need to signal that we support the interface for 165, but for 1155 we also need the fallback function
   ///
-  /// @param   _interfaceID  the interface we're signaling support for
+  /// @param   _interfaceId  the interface we're signaling support for
   ///
   /// @return  bool  True if the interface is supported, false otherwise.
   function supportsInterface(
-    bytes4 _interfaceID
+    bytes4 _interfaceId
   ) external pure returns (bool) {
-    bool _supported = _interfaceID == 0x01ffc9a7 // ERC-165 support (i.e. `bytes4(keccak256('supportsInterface(bytes4)'))`).
-      || _interfaceID == 0x150b7a02 // ERC721TokenReceiver
-      || _interfaceID == 0x4e2312e0; // ERC-1155 `ERC1155TokenReceiver` support (i.e. `bytes4(keccak256("onERC1155Received(address,address,uint256,uint256,bytes)")) ^ bytes4(keccak256("onERC1155BatchReceived(address,address,uint256[],uint256[],bytes)"))`).
+    bool _supported = _interfaceId == 0x01ffc9a7 // ERC-165 support (i.e. `bytes4(keccak256('supportsInterface(bytes4)'))`).
+      || _interfaceId == 0x150b7a02 // ERC721TokenReceiver
+      || _interfaceId == 0x4e2312e0; // ERC-1155 `ERC1155TokenReceiver` support (i.e. `bytes4(keccak256("onERC1155Received(address,address,uint256,uint256,bytes)")) ^ bytes4(keccak256("onERC1155BatchReceived(address,address,uint256[],uint256[],bytes)"))`).
 
     return _supported;
   }
@@ -95,7 +106,11 @@ contract OPStackProposer is IProposer {
   ///
   /// @dev Due to op-stack chain operators unique usecase this implementation is unconventional and does not make a low level call
   ///      But is still fully compatible with the aggregator service
-  function call(address _target, bytes calldata _data, uint256) external returns (bool) {
+  function onCall(
+    address _target,
+    bytes calldata _data,
+    uint256
+  ) external returns (bool) {
     if (msg.sender != PROPOSER_MULTICALL && address(this) != msg.sender) revert Unauthorized();
 
     (bytes32[] memory _versionedHashes) = abi.decode(_data, (bytes32[]));

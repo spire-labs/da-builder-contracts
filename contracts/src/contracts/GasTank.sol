@@ -11,10 +11,7 @@ import {ISemver} from 'interfaces/utils/ISemver.sol';
 /// @notice Contract for rollups to deposit funds for the aggregator service to charge from
 contract GasTank is IGasTank, ISemver, UUPSUpgradeable, OwnableUpgradeable {
   /// @notice The version of the contract
-  string internal constant _VERSION = '1.0.1';
-
-  /// @notice The delay before an account can be closed
-  uint256 public constant WITHDRAWAL_DELAY = 7 days;
+  string internal constant _VERSION = '1.1.1';
 
   /// @notice The address of the builder DA Builder is using
   address public builder;
@@ -23,15 +20,13 @@ contract GasTank is IGasTank, ISemver, UUPSUpgradeable, OwnableUpgradeable {
   mapping(address _operator => uint256 _balance) public balances;
 
   /// @notice Mapping of withdrawal start times
-  mapping(address _operator => uint256 _timestamp) public withdrawalStartedAt;
+  ///
+  /// @dev No longer used storage slot
+  // forge-lint: disable-next-line(mixed-case-variable)
+  mapping(address _operator => uint256 _timestamp) internal __unused_withdrawalStartedAt;
 
   /// @notice Storage gap for future upgrades
   uint256[50] private __gap;
-
-  modifier onlyBuilder() {
-    if (msg.sender != builder) revert NotBuilder();
-    _;
-  }
 
   /// @notice Constructor
   constructor() {
@@ -42,9 +37,14 @@ contract GasTank is IGasTank, ISemver, UUPSUpgradeable, OwnableUpgradeable {
   ///
   /// @param _owner The owner of the contract
   /// @param _builder The hot wallet the builder is using
-  function initialize(address _owner, address _builder) external virtual override initializer {
+  function initialize(
+    address _owner,
+    address _builder
+  ) external virtual override initializer {
     __Ownable_init(_owner);
     builder = _builder;
+
+    emit BuilderSet(_builder);
   }
 
   /// @notice Sets the builder
@@ -56,32 +56,6 @@ contract GasTank is IGasTank, ISemver, UUPSUpgradeable, OwnableUpgradeable {
     builder = _builder;
 
     emit BuilderSet(_builder);
-  }
-
-  /// @notice Charge an account
-  ///
-  /// @param _account The account to charge
-  ///
-  /// @dev Can only be called by the contract owner
-  function charge(
-    Account calldata _account
-  ) external onlyBuilder {
-    address _proxyAdmin = owner();
-    _charge(_account, _proxyAdmin);
-  }
-
-  /// @notice Charge an account
-  ///
-  /// @param _accounts The accounts to charge
-  ///
-  /// @dev Can only be called by the contract owner
-  function batchCharge(
-    Account[] calldata _accounts
-  ) external onlyBuilder {
-    address _proxyAdmin = owner();
-    for (uint256 i; i < _accounts.length; i++) {
-      _charge(_accounts[i], _proxyAdmin);
-    }
   }
 
   /// @notice Deposit funds into the account manager for an account
@@ -98,47 +72,18 @@ contract GasTank is IGasTank, ISemver, UUPSUpgradeable, OwnableUpgradeable {
     _deposit(msg.sender);
   }
 
-  /// @notice Initiate an account to be closed
-  function initiateAccountClose() external {
-    withdrawalStartedAt[msg.sender] = block.timestamp;
-
-    emit AccountCloseInitiated(msg.sender);
-  }
-
-  /// @notice Close an account
-  ///
-  /// @param _operator The address of the account to close
-  function closeAccount(
-    address _operator
+  /// @notice Withdraw funds from the account manager to the owner
+  function withdraw(
+    uint256 _amount
   ) external {
-    uint256 _withdrawalStartedAt = withdrawalStartedAt[_operator];
+    if (msg.sender != builder) revert NotBuilder();
 
-    if (_withdrawalStartedAt + WITHDRAWAL_DELAY > block.timestamp || _withdrawalStartedAt == 0) {
-      revert AccountCantBeClosed();
-    }
+    address payable _owner = payable(owner());
+    (bool _success,) = _owner.call{value: _amount}('');
 
-    uint256 _balance = balances[_operator];
-    balances[_operator] = 0;
-    withdrawalStartedAt[_operator] = 0;
+    if (!_success) revert FailedLowLevelCall();
 
-    (bool _success,) = _operator.call{value: _balance}('');
-    if (!_success) {
-      revert FailedLowLevelCall();
-    }
-
-    emit AccountClosed(_operator);
-  }
-
-  /// @notice Charge an account
-  ///
-  /// @param _account The account to charge
-  /// @param _recipient The admin of the proxy, should receive the funds
-  function _charge(Account calldata _account, address _recipient) internal {
-    balances[_account.operator] -= _account.charge;
-    (bool _success,) = _recipient.call{value: _account.charge}('');
-    if (!_success) {
-      revert FailedLowLevelCall();
-    }
+    emit Withdrawn(_amount);
   }
 
   /// @notice Deposit funds into the account manager for an account
@@ -147,10 +92,7 @@ contract GasTank is IGasTank, ISemver, UUPSUpgradeable, OwnableUpgradeable {
   function _deposit(
     address _operator
   ) internal {
-    if (withdrawalStartedAt[_operator] != 0) revert AccountClosing();
-
-    uint256 _balance = balances[_operator];
-    uint256 _newBalance = _balance + msg.value;
+    uint256 _newBalance = balances[_operator] + msg.value;
 
     balances[_operator] = _newBalance;
 

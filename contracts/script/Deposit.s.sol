@@ -2,7 +2,7 @@
 pragma solidity 0.8.30;
 
 import {GasTank} from 'contracts/GasTank.sol';
-import {Script, console} from 'forge-std/Script.sol';
+import {Script} from 'forge-std/Script.sol';
 
 // NOTE: Used internally for testing
 // TODO: Cleanup

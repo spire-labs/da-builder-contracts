@@ -12,7 +12,7 @@ import {IProposer} from 'interfaces/proposer/IProposer.sol';
 /// @notice Contract for us to multicall neccessary proposer functions
 contract ProposerMulticall is IProposerMulticall, OwnableUpgradeable, UUPSUpgradeable {
   /// @notice The version of the contract
-  string internal constant _VERSION = '1.0.1';
+  string internal constant _VERSION = '1.0.2';
 
   /// @notice The builder address
   ///
@@ -47,12 +47,10 @@ contract ProposerMulticall is IProposerMulticall, OwnableUpgradeable, UUPSUpgrad
 
     uint256 _preCallGasLeft;
     uint256 _gasUsed;
-    bytes memory _callData;
 
     for (uint256 i; i < _callsLength; ++i) {
-      _callData = abi.encodeCall(IProposer.call, (_calls[i].target, _calls[i].data, _calls[i].value));
       _preCallGasLeft = gasleft();
-      (bool _success, bytes memory _retdata) = _calls[i].proposer.call(_callData);
+      bool _success = IProposer(_calls[i].proposer).onCall(_calls[i].target, _calls[i].data, _calls[i].value);
       _gasUsed = _preCallGasLeft - gasleft();
 
       // NOTE: There is a weird edge case where because the `IProposer` implementation will have nested logic
@@ -61,11 +59,7 @@ contract ProposerMulticall is IProposerMulticall, OwnableUpgradeable, UUPSUpgrad
       if (_gasUsed > _calls[i].gasLimit) revert OutOfGas();
       _internalCallsGasUsed[i] = _gasUsed;
 
-      if (_retdata.length == 0) revert InvalidProposer();
-
-      bool _result = abi.decode(_retdata, (bool));
-
-      if (!_success || !_result) {
+      if (!_success) {
         revert LowLevelCallFailed();
       }
     }

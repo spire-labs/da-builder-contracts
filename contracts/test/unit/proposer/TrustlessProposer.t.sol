@@ -45,8 +45,9 @@ contract forTest_TrustlessProposer is TrustlessProposer {
     bytes memory _calldata,
     uint256 _gasLimit
   ) external view returns (bytes32) {
-    return
-      _hashTypedDataV4(keccak256(abi.encode(CALL_TYPEHASH, _deadline, _nonce, _target, _value, _calldata, _gasLimit)));
+    return _hashTypedDataV4(
+      keccak256(abi.encode(CALL_TYPEHASH, _deadline, _nonce, _target, _value, keccak256(_calldata), _gasLimit))
+    );
   }
 }
 
@@ -69,7 +70,10 @@ contract Base is Helpers {
 
 contract Unit_TrustlessProposer_receive is Base {
   /// @dev Tests that receive succeeds
-  function testFuzz_receive_succeeds(address _sender, uint256 _amount) public {
+  function testFuzz_receive_succeeds(
+    address _sender,
+    uint256 _amount
+  ) public {
     vm.assume(_sender != address(proposer));
 
     vm.deal(_sender, _amount);
@@ -87,7 +91,7 @@ contract Unit_TrustlessProposer_call is Base {
     vm.expectRevert(abi.encodeWithSelector(IProposer.Unauthorized.selector));
 
     vm.prank(nonProposer);
-    IProposer(proposer).call(nonProposer, '', 0);
+    IProposer(proposer).onCall(nonProposer, '', 0);
   }
 
   /// @dev Tests that call reverts if deadline has passed
@@ -103,7 +107,7 @@ contract Unit_TrustlessProposer_call is Base {
     vm.expectRevert(abi.encodeWithSelector(TrustlessProposer.DeadlinePassed.selector));
 
     vm.prank(proposerMulticall);
-    IProposer(proposer).call(nonProposer, abi.encode(bytes(''), _currentTime, 0, ''), 0);
+    IProposer(proposer).onCall(nonProposer, abi.encode(bytes(''), _currentTime, 0, ''), 0);
   }
 
   /// @dev Tests that call reverts if nonce is too low
@@ -115,14 +119,14 @@ contract Unit_TrustlessProposer_call is Base {
 
     vm.expectRevert(abi.encodeWithSelector(TrustlessProposer.NonceTooLow.selector));
     vm.prank(proposerMulticall);
-    IProposer(proposer).call(nonProposer, abi.encode(bytes(''), block.timestamp, _nonce - 1, ''), 0);
+    IProposer(proposer).onCall(nonProposer, abi.encode(bytes(''), block.timestamp, _nonce - 1, ''), 0);
   }
 
   /// @dev Tests that call reverts if signature is invalid
   function test_call_SignatureInvalid_reverts() public {
     vm.expectRevert(abi.encodeWithSelector(TrustlessProposer.SignatureInvalid.selector));
     vm.prank(proposerMulticall);
-    IProposer(proposer).call(nonProposer, abi.encode(bytes(''), block.timestamp, 0, ''), 0);
+    IProposer(proposer).onCall(nonProposer, abi.encode(bytes(''), block.timestamp, 0, ''), 0);
   }
 
   /// @dev Tests that call reverts if low level call fails
@@ -135,9 +139,8 @@ contract Unit_TrustlessProposer_call is Base {
 
     vm.expectRevert(abi.encodeWithSelector(IProposer.LowLevelCallFailed.selector));
     vm.prank(proposerMulticall);
-    IProposer(proposer).call(
-      nonProposer, abi.encode(abi.encodePacked(r, s, v), block.timestamp, 0, bytes(''), 1_000_000), 0
-    );
+    IProposer(proposer)
+      .onCall(nonProposer, abi.encode(abi.encodePacked(r, s, v), block.timestamp, 0, bytes(''), 1_000_000), 0);
   }
 
   /// @dev Tests that call reverts if gas limit is exceeded
@@ -145,17 +148,15 @@ contract Unit_TrustlessProposer_call is Base {
     forTest_GasConsumer gasConsumer = new forTest_GasConsumer();
     bytes memory _calldata = abi.encodeCall(forTest_GasConsumer.consumeGas, ());
 
-    bytes32 digest = forTest_TrustlessProposer(proposer).forTest_hashTypedDataV4(
-      block.timestamp, 0, address(gasConsumer), 0, _calldata, 1_000_000
-    );
+    bytes32 digest = forTest_TrustlessProposer(proposer)
+      .forTest_hashTypedDataV4(block.timestamp, 0, address(gasConsumer), 0, _calldata, 1_000_000);
     (uint8 v, bytes32 r, bytes32 s) = vm.sign(PROPOSER_PK, digest);
 
     // Foundry will provide enough gas for the call to succeed, our error should catch it and revert
     vm.expectRevert(abi.encodeWithSelector(TrustlessProposer.GasLimitExceeded.selector));
     vm.prank(proposerMulticall);
-    IProposer(proposer).call(
-      address(gasConsumer), abi.encode(abi.encodePacked(r, s, v), block.timestamp, 0, _calldata, 1_000_000), 0
-    );
+    IProposer(proposer)
+      .onCall(address(gasConsumer), abi.encode(abi.encodePacked(r, s, v), block.timestamp, 0, _calldata, 1_000_000), 0);
   }
 
   /// @dev Tests that call succeeds
@@ -165,9 +166,8 @@ contract Unit_TrustlessProposer_call is Base {
     (uint8 v, bytes32 r, bytes32 s) = vm.sign(PROPOSER_PK, digest);
 
     vm.prank(proposerMulticall);
-    bool result = IProposer(proposer).call(
-      address(0), abi.encode(abi.encodePacked(r, s, v), 999_999_999_999, 0, bytes(''), 1_000_000), 0
-    );
+    bool result = IProposer(proposer)
+      .onCall(address(0), abi.encode(abi.encodePacked(r, s, v), 999_999_999_999, 0, bytes(''), 1_000_000), 0);
 
     assertTrue(result);
   }

@@ -4,6 +4,7 @@ pragma solidity 0.8.30;
 import {GasTank} from 'contracts/GasTank.sol';
 import {ProposerMulticall} from 'contracts/ProposerMulticall.sol';
 import {Proposer} from 'contracts/proposer/Proposer.sol';
+import {TrustlessProposerEntry} from 'contracts/proposer/TrustlessProposerEntry.sol';
 
 import {Script, console} from 'forge-std/Script.sol';
 import {ERC1967Proxy} from 'openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol';
@@ -18,11 +19,9 @@ contract Deploy is Script {
     vm.createSelectFork(vm.envString('RPC_URL'));
     vm.startBroadcast(vm.envUint('DEPLOYER_PK'));
     GasTank gasTank = GasTank(
-      payable(
-        address(
+      payable(address(
           new ERC1967Proxy(address(new GasTank()), abi.encodeCall(GasTank.initialize, (_proxyAdmin, _daBuilderSigner)))
-        )
-      )
+        ))
     );
     console.log('GasTank deployed to: ', address(gasTank));
     ProposerMulticall proposerMulticall = ProposerMulticall(
@@ -35,6 +34,9 @@ contract Deploy is Script {
     console.log('ProposerMulticall deployed to: ', address(proposerMulticall));
     Proposer proposer = new Proposer(address(proposerMulticall));
     console.log('Proposer deployed to: ', address(proposer));
+
+    TrustlessProposerEntry trustlessProposerEntry = new TrustlessProposerEntry(address(proposerMulticall));
+    console.log('TrustlessProposerEntry deployed to: ', address(trustlessProposerEntry));
 
     // Sanity assertions
     assert(address(proposerMulticall).code.length > 0);
