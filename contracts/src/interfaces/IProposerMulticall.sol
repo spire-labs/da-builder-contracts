@@ -6,7 +6,6 @@ interface IProposerMulticall {
 
   error LowLevelCallFailed();
   error Unauthorized();
-  error InvalidProposer();
   error OutOfGas();
 
   struct Call {

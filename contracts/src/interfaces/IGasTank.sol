@@ -26,15 +26,13 @@ interface IGasTank {
   /// @notice Event emitted when the builder is set
   event BuilderSet(address _builder);
 
-  /// @notice Struct for charging an account
-  /// @param charge The amount to charge
-  /// @param operator The address of the account to charge
-  struct Account {
-    uint256 charge;
-    address operator;
-  }
+  /// @notice Event emitted when funds are withdrawn from the account manager
+  event Withdrawn(uint256 _amount);
 
-  function initialize(address _owner, address _builder) external;
+  function initialize(
+    address _owner,
+    address _builder
+  ) external;
   function setBuilder(
     address _builder
   ) external;
@@ -42,21 +40,5 @@ interface IGasTank {
   function deposit(
     address _operator
   ) external payable;
-  function charge(
-    Account calldata _account
-  ) external;
-  function batchCharge(
-    Account[] calldata _accounts
-  ) external;
-  function initiateAccountClose() external;
-  function closeAccount(
-    address _operator
-  ) external;
-  function withdrawalStartedAt(
-    address _operator
-  ) external view returns (uint256);
-  function balances(
-    address _operator
-  ) external view returns (uint256);
   function builder() external view returns (address);
 }

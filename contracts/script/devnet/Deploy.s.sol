@@ -20,13 +20,11 @@ contract Deploy is Script {
   function run() external {
     vm.startBroadcast(ADMIN_PK);
     GasTank gasTank = GasTank(
-      payable(
-        address(
+      payable(address(
           new ERC1967Proxy(
             address(new GasTank()), abi.encodeCall(GasTank.initialize, (vm.addr(ADMIN_PK), vm.addr(ADMIN_PK)))
           )
-        )
-      )
+        ))
     );
     console.log('GasTank deployed to: ', address(gasTank));
     ProposerMulticall proposerMulticall = ProposerMulticall(

@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 
-import {ERC1967Proxy} from '@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol';
 import {GasTank, IGasTank} from 'contracts/GasTank.sol';
-import {IProposerMulticall, ProposerMulticall} from 'contracts/ProposerMulticall.sol';
+import {ProposerMulticall} from 'contracts/ProposerMulticall.sol';
 import {Helpers} from 'test/utils/Helpers.sol';
 
 abstract contract Base is Helpers {
@@ -34,7 +33,10 @@ abstract contract Base is Helpers {
     _upgrade(proposerMulticallImpl, gasTankImpl);
   }
 
-  function _upgrade(ProposerMulticall _proposerMulticallImpl, GasTank _gasTankImpl) internal {
+  function _upgrade(
+    ProposerMulticall _proposerMulticallImpl,
+    GasTank _gasTankImpl
+  ) internal {
     // Contracts on mainnet should already be initialized
     vm.startPrank(proxyAdmin);
     proposerMulticall.upgradeToAndCall(address(_proposerMulticallImpl), '');

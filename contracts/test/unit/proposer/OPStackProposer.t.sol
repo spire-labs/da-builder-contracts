@@ -23,7 +23,10 @@ contract Base is Helpers {
 
 contract Unit_OPStackProposer_receive is Base {
   /// @dev Tests that receive succeeds
-  function testFuzz_receive_succeeds(address _sender, uint256 _amount) public {
+  function testFuzz_receive_succeeds(
+    address _sender,
+    uint256 _amount
+  ) public {
     vm.assume(_sender != address(proposer));
 
     vm.deal(_sender, _amount);
@@ -41,7 +44,7 @@ contract Unit_OPStackProposer_call is Base {
     vm.expectRevert(abi.encodeWithSelector(IProposer.Unauthorized.selector));
 
     vm.prank(nonProposer);
-    IProposer(proposer).call(nonProposer, '', 0);
+    IProposer(proposer).onCall(nonProposer, '', 0);
   }
 
   /// @dev Tests that call succeeds
@@ -50,7 +53,7 @@ contract Unit_OPStackProposer_call is Base {
     _versionedHashes[0] = keccak256('test');
 
     vm.prank(address(proposerMulticall));
-    bool _returnedValue = IProposer(proposer).call(nonProposer, abi.encode(_versionedHashes), 100);
+    bool _returnedValue = IProposer(proposer).onCall(nonProposer, abi.encode(_versionedHashes), 100);
 
     assertTrue(_returnedValue);
   }
@@ -63,13 +66,16 @@ contract Unit_OPStackProposer_call is Base {
 
     vm.prank(address(proposerMulticall));
 
-    bool _result = IProposer(proposer).call(nonProposer, abi.encode(_versionedHashes), 0);
+    bool _result = IProposer(proposer).onCall(nonProposer, abi.encode(_versionedHashes), 0);
 
     assertTrue(_result);
   }
 
   /// @dev Tests that event is emitted
-  function testFuzz_call_emitsEvent(bytes32[] memory _versionedHashes, uint256 _value) public {
+  function testFuzz_call_emitsEvent(
+    bytes32[] memory _versionedHashes,
+    uint256 _value
+  ) public {
     vm.assume(_versionedHashes.length < 100);
 
     vm.expectEmit(true, true, true, true);
@@ -77,7 +83,7 @@ contract Unit_OPStackProposer_call is Base {
 
     // Value is fuzzed, but the implementation does not use it, so there are no assertions
     vm.prank(address(proposerMulticall));
-    IProposer(proposer).call(nonProposer, abi.encode(_versionedHashes), _value);
+    IProposer(proposer).onCall(nonProposer, abi.encode(_versionedHashes), _value);
   }
 }
 

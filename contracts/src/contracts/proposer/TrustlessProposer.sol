@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 
-import {EIP712} from '@openzeppelin/contracts/utils/cryptography/EIP712.sol';
 import {ECDSA} from '@openzeppelin/contracts/utils/cryptography/ECDSA.sol';
+import {EIP712} from '@openzeppelin/contracts/utils/cryptography/EIP712.sol';
 import {IProposer} from 'interfaces/proposer/IProposer.sol';
 
 /// @title TrustlessProposer
@@ -53,14 +53,25 @@ abstract contract TrustlessProposer is IProposer, EIP712 {
   /// @dev     To support EIP 721 and EIP 1155, we need to respond to those methods with their own method signature
   ///
   /// @return  bytes4  onERC721Received function selector
-  function onERC721Received(address, address, uint256, bytes calldata) external pure returns (bytes4) {
+  function onERC721Received(
+    address,
+    address,
+    uint256,
+    bytes calldata
+  ) external pure returns (bytes4) {
     return this.onERC721Received.selector;
   }
 
   /// @dev     To support EIP 721 and EIP 1155, we need to respond to those methods with their own method signature
   ///
   /// @return  bytes4  onERC1155Received function selector
-  function onERC1155Received(address, address, uint256, uint256, bytes calldata) external pure returns (bytes4) {
+  function onERC1155Received(
+    address,
+    address,
+    uint256,
+    uint256,
+    bytes calldata
+  ) external pure returns (bytes4) {
     return this.onERC1155Received.selector;
   }
 
@@ -80,15 +91,15 @@ abstract contract TrustlessProposer is IProposer, EIP712 {
   /// @notice  EIP-1155 implementation
   /// we pretty much only need to signal that we support the interface for 165, but for 1155 we also need the fallback function
   ///
-  /// @param   _interfaceID  the interface we're signaling support for
+  /// @param   _interfaceId  the interface we're signaling support for
   ///
   /// @return  bool  True if the interface is supported, false otherwise.
   function supportsInterface(
-    bytes4 _interfaceID
+    bytes4 _interfaceId
   ) external pure returns (bool) {
-    bool _supported = _interfaceID == 0x01ffc9a7 // ERC-165 support (i.e. `bytes4(keccak256('supportsInterface(bytes4)'))`).
-      || _interfaceID == 0x150b7a02 // ERC721TokenReceiver
-      || _interfaceID == 0x4e2312e0; // ERC-1155 `ERC1155TokenReceiver` support (i.e. `bytes4(keccak256("onERC1155Received(address,address,uint256,uint256,bytes)")) ^ bytes4(keccak256("onERC1155BatchReceived(address,address,uint256[],uint256[],bytes)"))`).
+    bool _supported = _interfaceId == 0x01ffc9a7 // ERC-165 support (i.e. `bytes4(keccak256('supportsInterface(bytes4)'))`).
+      || _interfaceId == 0x150b7a02 // ERC721TokenReceiver
+      || _interfaceId == 0x4e2312e0; // ERC-1155 `ERC1155TokenReceiver` support (i.e. `bytes4(keccak256("onERC1155Received(address,address,uint256,uint256,bytes)")) ^ bytes4(keccak256("onERC1155BatchReceived(address,address,uint256[],uint256[],bytes)"))`).
     return _supported;
   }
 
@@ -107,7 +118,11 @@ abstract contract TrustlessProposer is IProposer, EIP712 {
   ///      the builder will ignore the transaction
   /// @dev Has a whitelist check to enforce an authorized caller
   /// @dev Used to allow for contracts to make arbitrary calls for an EOA
-  function call(address _target, bytes calldata _data, uint256 _value) external returns (bool) {
+  function onCall(
+    address _target,
+    bytes calldata _data,
+    uint256 _value
+  ) external returns (bool) {
     // The estimated gas used is not perfect but provides a meaningful bound to know if we went over the gas limit
     uint256 _startGas = gasleft();
 
@@ -162,8 +177,9 @@ abstract contract TrustlessProposer is IProposer, EIP712 {
     bytes memory _calldata,
     uint256 _gasLimit
   ) internal view returns (bytes32) {
-    return
-      _hashTypedDataV4(keccak256(abi.encode(CALL_TYPEHASH, _deadline, _nonce, _target, _value, _calldata, _gasLimit)));
+    return _hashTypedDataV4(
+      keccak256(abi.encode(CALL_TYPEHASH, _deadline, _nonce, _target, _value, keccak256(_calldata), _gasLimit))
+    );
   }
 
   /// @notice Gets the signer from the signature
@@ -172,7 +188,10 @@ abstract contract TrustlessProposer is IProposer, EIP712 {
   /// @param _sig The signature to recover the signer from
   ///
   /// @return The signer address
-  function _getSignerFromSignature(bytes32 _messageHash, bytes memory _sig) internal pure returns (address) {
+  function _getSignerFromSignature(
+    bytes32 _messageHash,
+    bytes memory _sig
+  ) internal pure returns (address) {
     (address _signer, ECDSA.RecoverError _error,) = ECDSA.tryRecover(_messageHash, _sig);
     if (_error != ECDSA.RecoverError.NoError) revert SignatureInvalid();
     return _signer;
